@@ -1,0 +1,451 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import inquirer from 'inquirer';
+import chalk from 'chalk';
+
+const CONFIG_FILE = '.commit-evaluator.config.json';
+
+const DEFAULT_CONFIG = {
+    apiKeys: {
+        anthropic: '',
+        openai: '',
+        google: '',
+        xai: '',
+    },
+    llm: {
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5-20250929',
+        temperature: 0.2,
+        maxTokens: 4096,
+    },
+    agents: {
+        enabled: ['senior-reviewer', 'developer', 'qa-engineer', 'metrics'],
+        retries: 2, // Discussion rounds
+        timeout: 300000,
+    },
+    output: {
+        directory: '.',
+        format: 'json',
+        generateHtml: true,
+    },
+    tracing: {
+        enabled: false,
+        apiKey: '',
+        project: 'commit-evaluator',
+        endpoint: 'https://api.smith.langchain.com',
+    },
+};
+
+/**
+ * Find existing config file in root directory only
+ */
+function findConfigPath(): string | null {
+    const rootConfig = path.join(process.cwd(), CONFIG_FILE);
+
+    if (fs.existsSync(rootConfig)) {
+        return rootConfig;
+    }
+    return null;
+}
+
+/**
+ * Initialize config with interactive prompts
+ */
+async function initializeConfig(): Promise<void> {
+    console.log(chalk.cyan('\n🚀 Welcome to Commit Evaluator Setup!\n'));
+
+    // Always create config in root directory
+    const configPath = path.join(process.cwd(), CONFIG_FILE);
+    console.log(chalk.gray(`Creating configuration in: ${CONFIG_FILE}\n`));
+
+    // Check if config already exists
+    if (fs.existsSync(configPath)) {
+        const { shouldOverwrite } = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'shouldOverwrite',
+                message: 'Config already exists. Overwrite?',
+                default: false,
+            },
+        ]);
+
+        if (!shouldOverwrite) {
+            console.log(chalk.yellow('Setup cancelled.'));
+            return;
+        }
+    }
+
+    // Start with default config
+    const config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+
+    // Interactive API key setup - MANDATORY
+    console.log(chalk.cyan('📋 LLM Provider Selection (REQUIRED)\n'));
+
+    const { provider } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'provider',
+            message: 'Choose your LLM provider:',
+            choices: [
+                {
+                    name: 'Anthropic Claude (recommended) - Best quality and accuracy',
+                    value: 'anthropic',
+                    short: 'Anthropic',
+                },
+                {
+                    name: 'OpenAI GPT - Latest and most powerful',
+                    value: 'openai',
+                    short: 'OpenAI',
+                },
+                {
+                    name: 'Google Gemini - Strong reasoning and large context',
+                    value: 'google',
+                    short: 'Google',
+                },
+                {
+                    name: 'xAI Grok - Real-time insights and unique perspective',
+                    value: 'xai',
+                    short: 'xAI',
+                },
+            ],
+        },
+    ]);
+
+    // Provider-specific configuration with available models
+    const providerInfo = {
+        anthropic: {
+            defaultModel: 'claude-sonnet-4-5-20250929',
+            models: [
+                {
+                    name: 'claude-sonnet-4-5-20250929 (recommended) - Latest, best quality',
+                    value: 'claude-sonnet-4-5-20250929',
+                },
+                {
+                    name: 'claude-haiku-4-5-20251001 - Fastest, most affordable',
+                    value: 'claude-haiku-4-5-20251001',
+                },
+                { name: 'claude-opus-4-1-20250805 - Most powerful', value: 'claude-opus-4-1-20250805' },
+                {
+                    name: 'claude-sonnet-4-20250514 - Previous generation',
+                    value: 'claude-sonnet-4-20250514',
+                },
+            ],
+            keyFormat: 'sk-ant-...',
+            url: 'https://console.anthropic.com/',
+        },
+        openai: {
+            defaultModel: 'gpt-4o-mini',
+            models: [
+                { name: 'gpt-4o-mini (recommended) - Fast and cheap', value: 'gpt-4o-mini' },
+                { name: 'gpt-4o - Multimodal flagship', value: 'gpt-4o' },
+                { name: 'gpt-4-turbo - GPT-4 Turbo', value: 'gpt-4-turbo' },
+                { name: 'gpt-4 - Legacy GPT-4', value: 'gpt-4' },
+                { name: 'o1-mini - Reasoning (Tier 5 required)', value: 'o1-mini' },
+                { name: 'o1-preview - Advanced reasoning (Tier 5 required)', value: 'o1-preview' },
+            ],
+            keyFormat: 'sk-...',
+            url: 'https://platform.openai.com/',
+        },
+        google: {
+            defaultModel: 'gemini-2.5-pro',
+            models: [
+                { name: 'gemini-2.5-pro (recommended) - Best reasoning', value: 'gemini-2.5-pro' },
+                { name: 'gemini-2.5-flash - Fastest multimodal', value: 'gemini-2.5-flash' },
+                { name: 'gemini-2.5-flash-lite - Most efficient', value: 'gemini-2.5-flash-lite' },
+                { name: 'gemini-1.5-pro - Previous generation', value: 'gemini-1.5-pro' },
+            ],
+            keyFormat: 'AIza...',
+            url: 'https://ai.google.dev/',
+        },
+        xai: {
+            defaultModel: 'grok-3-beta',
+            models: [
+                {
+                    name: 'grok-3-beta (recommended) - Latest with real-time insights',
+                    value: 'grok-3-beta',
+                },
+                { name: 'grok-2 - Stable and reliable', value: 'grok-2' },
+            ],
+            keyFormat: 'xai-...',
+            url: 'https://console.x.ai/',
+        },
+    };
+
+    const info = providerInfo[provider as keyof typeof providerInfo];
+
+    // Select model for the chosen provider
+    console.log(chalk.cyan(`\n🎯 Available ${provider} models:\n`));
+
+    const { selectedModel } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'selectedModel',
+            message: `Choose ${provider} model:`,
+            choices: info.models,
+            default: info.defaultModel,
+        },
+    ]);
+
+    // Prompt for API key with validation
+    console.log(chalk.gray(`\nGet your API key at: ${info.url}\n`));
+
+    const { apiKey } = await inquirer.prompt([
+        {
+            type: 'password',
+            name: 'apiKey',
+            message: `Enter ${provider} API key (${info.keyFormat}):`,
+            validate: (input: string) => {
+                if (!input || input.trim().length === 0) {
+                    return 'API key is required';
+                }
+                return true;
+            },
+            mask: '*',
+        },
+    ]);
+
+    // Configure provider
+    config.apiKeys[provider] = apiKey.trim();
+    config.llm.provider = provider;
+    config.llm.model = selectedModel;
+
+    console.log(chalk.green(`\n✅ Configured to use: ${provider} (${selectedModel})`));
+
+    // LangSmith tracing setup (optional)
+    console.log(chalk.cyan('\n\n🔍 LangSmith Tracing Configuration (OPTIONAL)\n'));
+
+    const { enableTracing } = await inquirer.prompt([
+        {
+            type: 'confirm',
+            name: 'enableTracing',
+            message: 'Enable LangSmith tracing for debugging?',
+            default: false,
+        },
+    ]);
+
+    if (enableTracing) {
+        const tracingAnswers = await inquirer.prompt([
+            {
+                type: 'password',
+                name: 'langchainKey',
+                message: 'Enter LangSmith API key (lsv2_pt_...):',
+                mask: '*',
+            },
+            {
+                type: 'input',
+                name: 'projectName',
+                message: 'Enter LangSmith project name:',
+                default: 'commit-evaluator',
+            },
+        ]);
+
+        config.tracing.enabled = true;
+        if (tracingAnswers.langchainKey.trim()) {
+            config.tracing.apiKey = tracingAnswers.langchainKey.trim();
+        }
+        if (tracingAnswers.projectName.trim()) {
+            config.tracing.project = tracingAnswers.projectName.trim();
+        }
+
+        console.log(chalk.green(`✅ LangSmith tracing enabled for project: ${config.tracing.project}`));
+    } else {
+        console.log(chalk.gray('   Skipped - you can enable it later with: commit-evaluator config --set tracing.enabled=true'));
+    }
+
+    // Save configuration
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    console.log(chalk.green(`\n✅ Created ${path.relative(process.cwd(), configPath)}`));
+
+    // Suggest adding config file to .gitignore (contains API keys)
+    const gitignorePath = path.join(process.cwd(), '.gitignore');
+    let shouldAddGitignore = false;
+    if (fs.existsSync(gitignorePath)) {
+        const gitignoreContent = fs.readFileSync(gitignorePath, 'utf-8');
+        if (!gitignoreContent.includes('.commit-evaluator.config.json')) {
+            const { addToGitignore } = await inquirer.prompt([
+                {
+                    type: 'confirm',
+                    name: 'addToGitignore',
+                    message: 'Add .commit-evaluator.config.json to .gitignore? (recommended - contains API keys)',
+                    default: true,
+                },
+            ]);
+            shouldAddGitignore = addToGitignore;
+        }
+    }
+
+    if (shouldAddGitignore) {
+        fs.appendFileSync(
+            gitignorePath,
+            '\n# Commit Evaluator configuration (contains API keys)\n.commit-evaluator.config.json\n',
+        );
+        console.log(chalk.green('✅ Added .commit-evaluator.config.json to .gitignore'));
+    }
+
+    console.log(chalk.cyan('\n🎉 Setup complete!'));
+    console.log(chalk.cyan('\n📝 Configuration Summary:'));
+    console.log(chalk.gray(`  • Config file: ${path.relative(process.cwd(), configPath)}`));
+    console.log(chalk.gray(`  • LLM Provider: ${config.llm.provider} (${config.llm.model})`));
+    console.log(chalk.gray(`  • Tracing: ${config.tracing.enabled ? 'Enabled' : 'Disabled'}`));
+    console.log(chalk.cyan('\n💡 Tips:'));
+    console.log(chalk.gray('  • Change provider: commit-evaluator config --set llm.provider=openai'));
+    console.log(chalk.gray('  • Change model: commit-evaluator config --set llm.model=gpt-4o'));
+    console.log(chalk.gray('  • Update API key: commit-evaluator config --set apiKeys.anthropic=sk-ant-...'));
+    console.log(chalk.gray('  • View settings: commit-evaluator config --list'));
+    console.log(chalk.cyan('\nNext steps:'));
+    console.log(chalk.gray('  1. Run: commit-evaluator evaluate <diff-file>'));
+    console.log(chalk.gray('  2. View results in: results.json, report.html\n'));
+}
+
+/**
+ * List all config values (mask API keys)
+ */
+function listConfig(): void {
+    const configPath = findConfigPath();
+
+    if (!configPath) {
+        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: commit-evaluator config --init\n`));
+        process.exit(1);
+    }
+
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+
+    // Mask API keys for security
+    const maskedConfig = JSON.parse(JSON.stringify(config));
+    if (maskedConfig.apiKeys) {
+        Object.keys(maskedConfig.apiKeys).forEach((key) => {
+            if (maskedConfig.apiKeys[key]) {
+                maskedConfig.apiKeys[key] = '***' + maskedConfig.apiKeys[key].slice(-4);
+            }
+        });
+    }
+    if (maskedConfig.tracing?.apiKey) {
+        maskedConfig.tracing.apiKey = '***' + maskedConfig.tracing.apiKey.slice(-4);
+    }
+
+    console.log(chalk.cyan(`\n📋 Configuration (${path.relative(process.cwd(), configPath)}):\n`));
+    console.log(JSON.stringify(maskedConfig, null, 2));
+    console.log();
+}
+
+/**
+ * Get specific config value
+ */
+function getConfigValue(key: string): void {
+    const configPath = findConfigPath();
+
+    if (!configPath) {
+        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: commit-evaluator config --init\n`));
+        process.exit(1);
+    }
+
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    const keys = key.split('.');
+    let value: Record<string, unknown> | string = config;
+
+    for (const k of keys) {
+        if (value && typeof value === 'object' && k in value) {
+            value = value[k] as Record<string, unknown> | string;
+        } else {
+            console.log(chalk.red(`\n❌ Key not found: ${key}\n`));
+            process.exit(1);
+        }
+    }
+
+    console.log(JSON.stringify(value, null, 2));
+}
+
+/**
+ * Set config value
+ */
+function setConfigValue(keyValue: string): void {
+    const configPath = findConfigPath();
+
+    if (!configPath) {
+        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: commit-evaluator config --init\n`));
+        process.exit(1);
+    }
+
+    const [key, ...valueParts] = keyValue.split('=');
+    const valueStr = valueParts.join('=');
+
+    if (!key || !valueStr) {
+        console.log(chalk.red('\n❌ Invalid format. Use: key=value (e.g., llm.temperature=0.5)\n'));
+        process.exit(1);
+    }
+
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    const keys = key.split('.');
+    let current: Record<string, unknown> = config;
+
+    // Navigate to parent object
+    for (let i = 0; i < keys.length - 1; i++) {
+        const k = keys[i];
+        if (!current[k] || typeof current[k] !== 'object') {
+            current[k] = {};
+        }
+        current = current[k] as Record<string, unknown>;
+    }
+
+    // Parse value
+    let value: unknown;
+    try {
+        value = JSON.parse(valueStr);
+    } catch {
+        value = valueStr;
+    }
+
+    // Set value
+    current[keys[keys.length - 1]] = value;
+
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    console.log(chalk.green(`\n✅ Set ${key} = ${JSON.stringify(value)}`));
+    console.log(chalk.gray(`   in ${path.relative(process.cwd(), configPath)}\n`));
+}
+
+/**
+ * Reset config to defaults
+ */
+function resetConfig(): void {
+    const configPath = findConfigPath();
+
+    if (!configPath) {
+        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: commit-evaluator config --init\n`));
+        process.exit(1);
+    }
+
+    fs.writeFileSync(configPath, JSON.stringify(DEFAULT_CONFIG, null, 2));
+    console.log(chalk.green(`\n✅ Reset ${path.relative(process.cwd(), configPath)} to defaults\n`));
+}
+
+/**
+ * Run config command
+ */
+export async function runConfigCommand(args: string[]): Promise<void> {
+    const [flag, value] = args;
+
+    try {
+        if (flag === '--init') {
+            await initializeConfig();
+        } else if (flag === '--list') {
+            listConfig();
+        } else if (flag === '--get' && value) {
+            getConfigValue(value);
+        } else if (flag === '--set' && value) {
+            setConfigValue(value);
+        } else if (flag === '--reset') {
+            resetConfig();
+        } else {
+            console.log(chalk.cyan('\nUsage:'));
+            console.log(chalk.gray('  commit-evaluator config --init                    # Interactive setup'));
+            console.log(chalk.gray('  commit-evaluator config --list                    # Show all settings'));
+            console.log(chalk.gray('  commit-evaluator config --get llm.model           # Get specific value'));
+            console.log(chalk.gray('  commit-evaluator config --set llm.temperature=0.5 # Set value'));
+            console.log(chalk.gray('  commit-evaluator config --reset                   # Reset to defaults\n'));
+        }
+    } catch (error) {
+        console.log(chalk.red('\n❌ Error:'), error instanceof Error ? error.message : error);
+        console.log();
+        process.exit(1);
+    }
+}

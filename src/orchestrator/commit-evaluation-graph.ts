@@ -1,0 +1,497 @@
+import { StateGraph, START, END, Annotation, MemorySaver } from '@langchain/langgraph';
+import { AgentRegistry } from '../agents/agent-registry';
+import { AgentResult } from '../agents/agent.interface';
+import { ConversationMessage, PillarScores } from '../types/agent.types';
+import { AppConfig } from '../config/config.interface';
+import { calculateCost, formatTokenUsage, formatCost } from '../utils/token-tracker';
+
+/**
+ * LangGraph State Definition for Commit Evaluation
+ * This state flows through the graph and accumulates results
+ */
+export const CommitEvaluationState = Annotation.Root({
+    // Input data
+    commitDiff: Annotation<string>,
+    filesChanged: Annotation<string[]>,
+    vectorStore: Annotation<any>, // RAG vector store for large diffs
+
+    // Commit metadata for logging
+    commitHash: Annotation<string | undefined>,
+    commitIndex: Annotation<number | undefined>,
+    totalCommits: Annotation<number | undefined>,
+
+    // Agent execution state
+    currentRound: Annotation<number>,
+    maxRounds: Annotation<number>,
+
+    // Agent results (accumulated)
+    agentResults: Annotation<AgentResult[]>({
+        reducer: (state: AgentResult[], update: AgentResult[]) => {
+            // Merge agent results, replacing existing ones from same agent
+            const merged = [...state];
+            for (const newResult of update) {
+                const existingIdx = merged.findIndex(
+                    r => r.summary && newResult.summary &&
+                        r.summary.substring(0, 50) === newResult.summary.substring(0, 50)
+                );
+                if (existingIdx >= 0) {
+                    merged[existingIdx] = newResult;
+                } else {
+                    merged.push(newResult);
+                }
+            }
+            return merged;
+        },
+        default: () => [],
+    }),
+
+    // Previous round results for convergence detection
+    previousRoundResults: Annotation<AgentResult[]>,
+
+    // Convergence metrics
+    convergenceScore: Annotation<number | undefined>,
+    converged: Annotation<boolean>,
+
+    // Conversation tracking (NEW for multi-agent discussions)
+    conversationHistory: Annotation<ConversationMessage[]>({
+        reducer: (state: ConversationMessage[], update: ConversationMessage[]) => {
+            return [...state, ...update];
+        },
+        default: () => [],
+    }),
+
+    // Aggregated 7-pillar scores (NEW for metrics tracking)
+    pillarScores: Annotation<Partial<PillarScores>>({
+        reducer: (state: Partial<PillarScores>, update: Partial<PillarScores>) => {
+            return { ...state, ...update };
+        },
+        default: () => ({}),
+    }),
+
+    // Metadata
+    startTime: Annotation<number>,
+    endTime: Annotation<number | undefined>,
+
+    // Token tracking
+    totalInputTokens: Annotation<number>({
+        reducer: (state: number, update: number) => state + update,
+        default: () => 0,
+    }),
+    totalOutputTokens: Annotation<number>({
+        reducer: (state: number, update: number) => state + update,
+        default: () => 0,
+    }),
+    totalCost: Annotation<number>({
+        reducer: (state: number, update: number) => state + update,
+        default: () => 0,
+    }),
+});
+
+/**
+ * Calculate similarity between two agent results
+ * Uses simple Jaccard similarity on word sets
+ */
+function calculateSimilarity(result1: AgentResult, result2: AgentResult): number {
+    const getText = (r: AgentResult) => `${r.summary || ''} ${r.details || ''}`.toLowerCase();
+
+    const text1 = getText(result1);
+    const text2 = getText(result2);
+
+    const words1 = new Set(text1.split(/\s+/).filter(w => w.length > 3));
+    const words2 = new Set(text2.split(/\s+/).filter(w => w.length > 3));
+
+    if (words1.size === 0 || words2.size === 0) return 0;
+
+    const intersection = new Set([...words1].filter(w => words2.has(w)));
+    const union = new Set([...words1, ...words2]);
+
+    return intersection.size / union.size;
+}
+
+/**
+ * Check if agent results have converged between rounds
+ * Enhanced to consider both content similarity and metric stability
+ */
+function checkConvergence(
+    currentResults: AgentResult[],
+    previousResults: AgentResult[],
+    threshold: number,
+): { converged: boolean; score: number } {
+    if (previousResults.length === 0) {
+        return { converged: false, score: 0 };
+    }
+
+    // 1. Content similarity (original logic)
+    let totalSimilarity = 0;
+    let comparisons = 0;
+
+    for (const currentResult of currentResults) {
+        for (const previousResult of previousResults) {
+            const similarity = calculateSimilarity(currentResult, previousResult);
+            totalSimilarity += similarity;
+            comparisons++;
+        }
+    }
+
+    const avgSimilarity = comparisons > 0 ? totalSimilarity / comparisons : 0;
+
+    // 2. Metric stability (new logic for conversation quality)
+    const currentMetrics = currentResults.map(r => r.metrics).filter(Boolean);
+    const previousMetrics = previousResults.map(r => r.metrics).filter(Boolean);
+
+    let metricStability = 1.0; // Default to stable if no metrics
+    if (currentMetrics.length > 0 && previousMetrics.length > 0) {
+        // Check if metrics have stabilized (small variance between rounds)
+        const metricKeys = [
+            'codeQuality',
+            'codeComplexity',
+            'idealTimeHours',
+            'actualTimeHours',
+            'functionalImpact',
+            'testCoverage',
+        ];
+
+        let totalDifference = 0;
+        let metricComparisons = 0;
+
+        for (const key of metricKeys) {
+            const currentValues = currentMetrics
+                .map(m => (m as any)[key])
+                .filter(v => v !== undefined);
+            const previousValues = previousMetrics
+                .map(m => (m as any)[key])
+                .filter(v => v !== undefined);
+
+            if (currentValues.length > 0 && previousValues.length > 0) {
+                const currentAvg =
+                    currentValues.reduce((sum, v) => sum + Math.abs(v), 0) / currentValues.length;
+                const previousAvg =
+                    previousValues.reduce((sum, v) => sum + Math.abs(v), 0) / previousValues.length;
+
+                // Normalize difference (assume max scale is 10 for most metrics)
+                const difference = Math.abs(currentAvg - previousAvg) / 10;
+                totalDifference += difference;
+                metricComparisons++;
+            }
+        }
+
+        // Metric stability: 1.0 = identical, 0.0 = completely different
+        metricStability =
+            metricComparisons > 0 ? 1 - totalDifference / metricComparisons : 1.0;
+    }
+
+    // Combined convergence score (70% content similarity + 30% metric stability)
+    const combinedScore = avgSimilarity * 0.7 + metricStability * 0.3;
+
+    return {
+        converged: combinedScore >= threshold,
+        score: combinedScore,
+    };
+}
+
+/**
+ * Get the purpose/phase of the current discussion round
+ */
+function getRoundPurpose(roundNumber: number): 'initial' | 'concerns' | 'validation' {
+    if (roundNumber === 0) return 'initial';
+    if (roundNumber === 1) return 'concerns';
+    return 'validation';
+}
+
+/**
+ * Create LangGraph-based Commit Evaluation Workflow
+ * 
+ * Graph structure:
+ *   START → runAgents → shouldContinue? → [YES: runAgents | NO: runMetrics] → END
+ * 
+ * 3-Round Discussion:
+ *   Round 1: Initial analysis (all agents analyze independently)
+ *   Round 2: Concerns (agents raise questions/concerns to responsible agents)
+ *   Round 3: Validation (agents respond to concerns and finalize scores)
+ */
+export function createCommitEvaluationGraph(
+    agentRegistry: AgentRegistry,
+    config: AppConfig,
+) {
+    const agents = agentRegistry.getAgents();
+    const maxRounds = config.agents.retries || 3; // 3-round conversation: initial → concerns → validation
+
+    // Node: Run all agents in parallel (enabling conversation)
+    async function runAgents(state: typeof CommitEvaluationState.State) {
+        const roundPurpose = getRoundPurpose(state.currentRound);
+        const roundLabel = roundPurpose === 'initial' ? 'Initial Analysis'
+            : roundPurpose === 'concerns' ? 'Raising Concerns & Questions'
+                : 'Validation & Final Scores';
+
+        // Build commit identifier for logging
+        const commitId = state.commitHash ? state.commitHash.substring(0, 7) : 'unknown';
+        const commitPrefix = state.commitIndex !== undefined && state.totalCommits !== undefined
+            ? `[${state.commitIndex}/${state.totalCommits}]`
+            : '';
+
+        console.log(`\n${commitPrefix} 🔄 ${commitId} - Round ${state.currentRound + 1}/${state.maxRounds} (${roundLabel})`);
+
+        // Track agent execution for inline status updates
+        const agentNames = agents
+            .filter(agent => agent.canExecute({
+                commitDiff: state.commitDiff,
+                filesChanged: state.filesChanged,
+            }))
+            .map(agent => agent.getMetadata().name);
+
+        // Track completed agents for inline progress
+        let completedCount = 0;
+        const totalAgents = agentNames.length;
+
+        // Calculate overall progress percentage (rounds * agents)
+        const totalSteps = state.maxRounds * totalAgents;
+        const completedSteps = state.currentRound * totalAgents;
+
+        // Show initial progress with percentage
+        const initialProgress = Math.floor((completedSteps / totalSteps) * 100);
+        process.stdout.write(`  ${commitPrefix} ⏳ ${initialProgress}% [${completedSteps}/${totalSteps}] Running agents...`);
+
+        const agentExecutionPromises = agents
+            .filter(agent => agent.canExecute({
+                commitDiff: state.commitDiff,
+                filesChanged: state.filesChanged,
+            }))
+            .map(async agent => {
+                const agentName = agent.getMetadata().name;
+                const agentRole = agent.getMetadata().description.split(' - ')[0] || agentName;
+
+                try {
+                    // Pass previous agent results for conversation context
+                    const result = await agent.execute({
+                        commitDiff: state.commitDiff,
+                        filesChanged: state.filesChanged,
+                        agentResults: state.agentResults, // Agents can reference each other's responses
+                        conversationHistory: state.conversationHistory, // Pass full conversation
+                        vectorStore: state.vectorStore, // RAG support for large diffs
+                        roundPurpose, // NEW: Tell agent what phase we're in (initial/concerns/validation)
+                    });
+
+                    // Update progress inline with \r (same line)
+                    completedCount++;
+                    const currentSteps = completedSteps + completedCount;
+                    const currentProgress = Math.floor((currentSteps / totalSteps) * 100);
+
+                    const statusLine = `  ${commitPrefix} ✅ ${currentProgress}% [${currentSteps}/${totalSteps}] ${agentName}`;
+                    const padding = ' '.repeat(Math.max(0, 100 - statusLine.length));
+                    process.stdout.write(`\r${statusLine}${padding}`);
+
+                    // If all agents done in this round, add newline
+                    if (completedCount === totalAgents) {
+                        process.stdout.write('\n');
+                    }
+
+                    // Attach agent metadata to result for formatters
+                    result.agentName = agentRole; // Use role as display name
+                    result.agentRole = agentName; // Use name as technical identifier
+
+                    // Create conversation message for this agent's response
+                    const conversationMessage: ConversationMessage = {
+                        round: state.currentRound,
+                        agentRole: agentRole as any, // Type will be validated by agent
+                        agentName,
+                        message: result.summary || '',
+                        timestamp: new Date(),
+                        concernsRaised: result.details ? [result.details] : undefined,
+                    };
+
+                    return { result, conversationMessage };
+                } catch (error) {
+                    console.error(`  ❌ ${agentName} failed: ${error instanceof Error ? error.message : String(error)}`);
+
+                    // Return a placeholder result to maintain agent count
+                    const errorResult: AgentResult = {
+                        summary: '', // Empty summary will be filtered out
+                        details: `Agent execution failed: ${error instanceof Error ? error.message : String(error)}`,
+                        metrics: {},
+                        agentName: agentRole,
+                        agentRole: agentName,
+                    };
+
+                    const conversationMessage: ConversationMessage = {
+                        round: state.currentRound,
+                        agentRole: agentRole as any,
+                        agentName,
+                        message: '',
+                        timestamp: new Date(),
+                    };
+
+                    return { result: errorResult, conversationMessage };
+                }
+            });
+
+        const agentResponses = await Promise.all(agentExecutionPromises);
+
+        // Filter out invalid results and log warnings
+        const validResponses = agentResponses.filter(response => {
+            const isValid = response.result &&
+                response.result.summary &&
+                response.result.summary.trim().length > 0;
+
+            if (!isValid) {
+                console.warn(`  ⚠️  ${response.conversationMessage.agentName} returned invalid/empty result`);
+            }
+
+            return isValid;
+        });
+
+        // Log if any agents failed
+        if (validResponses.length < agentResponses.length) {
+            const failedCount = agentResponses.length - validResponses.length;
+            console.warn(`\n⚠️  Warning: ${failedCount} agent(s) failed to return valid results in round ${state.currentRound + 1}`);
+        }
+
+        const results = validResponses.map(r => r.result);
+        const conversationMessages = validResponses.map(r => r.conversationMessage);
+
+        // Import weighted aggregation utilities
+        const { calculateWeightedAverage } = require('../constants/agent-weights.constants');
+
+        // Collect all agent scores for each pillar (for weighted averaging)
+        type PillarName = 'functionalImpact' | 'idealTimeHours' | 'testCoverage' | 'codeQuality' | 'codeComplexity' | 'actualTimeHours' | 'technicalDebtHours';
+        const pillarScoresCollected: Record<PillarName, Array<{ agentName: string, score: number }>> = {
+            functionalImpact: [],
+            idealTimeHours: [],
+            testCoverage: [],
+            codeQuality: [],
+            codeComplexity: [],
+            actualTimeHours: [],
+            technicalDebtHours: [],
+        };
+
+        // Collect scores from all agents
+        for (const result of results) {
+            const agentName = result.agentRole || result.agentName || 'unknown'; // Use agentRole (short key) for weight lookup
+            if (result.metrics) {
+                if (result.metrics.functionalImpact !== undefined) {
+                    pillarScoresCollected.functionalImpact.push({ agentName, score: result.metrics.functionalImpact });
+                }
+                if (result.metrics.idealTimeHours !== undefined) {
+                    pillarScoresCollected.idealTimeHours.push({ agentName, score: result.metrics.idealTimeHours });
+                }
+                if (result.metrics.testCoverage !== undefined) {
+                    pillarScoresCollected.testCoverage.push({ agentName, score: result.metrics.testCoverage });
+                }
+                if (result.metrics.codeQuality !== undefined) {
+                    pillarScoresCollected.codeQuality.push({ agentName, score: result.metrics.codeQuality });
+                }
+                if (result.metrics.codeComplexity !== undefined) {
+                    pillarScoresCollected.codeComplexity.push({ agentName, score: result.metrics.codeComplexity });
+                }
+                if (result.metrics.actualTimeHours !== undefined) {
+                    pillarScoresCollected.actualTimeHours.push({ agentName, score: result.metrics.actualTimeHours });
+                }
+                if (result.metrics.technicalDebtHours !== undefined) {
+                    pillarScoresCollected.technicalDebtHours.push({ agentName, score: result.metrics.technicalDebtHours });
+                }
+            }
+        }
+
+        // Calculate weighted averages for each pillar
+        const newPillarScores: Partial<PillarScores> = {};
+        if (pillarScoresCollected.functionalImpact.length > 0) {
+            newPillarScores.functionalImpact = calculateWeightedAverage(pillarScoresCollected.functionalImpact, 'functionalImpact');
+        }
+        if (pillarScoresCollected.idealTimeHours.length > 0) {
+            newPillarScores.idealTimeHours = calculateWeightedAverage(pillarScoresCollected.idealTimeHours, 'idealTimeHours');
+        }
+        if (pillarScoresCollected.testCoverage.length > 0) {
+            newPillarScores.testCoverage = calculateWeightedAverage(pillarScoresCollected.testCoverage, 'testCoverage');
+        }
+        if (pillarScoresCollected.codeQuality.length > 0) {
+            newPillarScores.codeQuality = calculateWeightedAverage(pillarScoresCollected.codeQuality, 'codeQuality');
+        }
+        if (pillarScoresCollected.codeComplexity.length > 0) {
+            newPillarScores.codeComplexity = calculateWeightedAverage(pillarScoresCollected.codeComplexity, 'codeComplexity');
+        }
+        if (pillarScoresCollected.actualTimeHours.length > 0) {
+            newPillarScores.actualTimeHours = calculateWeightedAverage(pillarScoresCollected.actualTimeHours, 'actualTimeHours');
+        }
+        if (pillarScoresCollected.technicalDebtHours.length > 0) {
+            newPillarScores.technicalDebtHours = calculateWeightedAverage(pillarScoresCollected.technicalDebtHours, 'technicalDebtHours');
+        }
+
+        // Check for convergence if this isn't the first round
+        const clarityThreshold = config.agents.clarityThreshold || 0.85;
+        const { converged, score } = checkConvergence(
+            results,
+            state.previousRoundResults || [],
+            clarityThreshold,
+        );
+
+        if (converged && state.currentRound > 0) {
+            console.log(`  🎯 Convergence detected! Similarity: ${(score * 100).toFixed(1)}%`);
+        }
+
+        // Aggregate token usage from all agents
+        let roundInputTokens = 0;
+        let roundOutputTokens = 0;
+        let roundCost = 0;
+
+        for (const result of results) {
+            if (result.tokenUsage) {
+                roundInputTokens += result.tokenUsage.inputTokens;
+                roundOutputTokens += result.tokenUsage.outputTokens;
+
+                const costCalc = calculateCost(
+                    config.llm.provider,
+                    config.llm.model,
+                    result.tokenUsage,
+                );
+                roundCost += costCalc.totalCost;
+            }
+        }
+
+        return {
+            agentResults: results,
+            previousRoundResults: results,
+            currentRound: state.currentRound + 1,
+            convergenceScore: score,
+            converged,
+            conversationHistory: conversationMessages, // Add to conversation
+            pillarScores: newPillarScores, // Update aggregated scores
+            totalInputTokens: roundInputTokens,
+            totalOutputTokens: roundOutputTokens,
+            totalCost: roundCost,
+        };
+    }
+
+    // Conditional edge: Decide whether to continue discussion rounds or end
+    function shouldContinue(state: typeof CommitEvaluationState.State): typeof END | 'runAgents' {
+        // Check if converged (early stopping)
+        if (state.converged && state.currentRound > 0) {
+            console.log(`  ⏭️  Stopping early due to convergence`);
+            return END;
+        }
+
+        // Check if reached max rounds
+        if (state.currentRound < state.maxRounds) {
+            return 'runAgents'; // Continue discussion
+        }
+
+        return END; // Finish evaluation
+    }
+
+    // Build the graph with checkpointing support
+    const graph = new StateGraph(CommitEvaluationState)
+        .addNode('runAgents', runAgents)
+        .addEdge(START, 'runAgents')
+        .addConditionalEdges('runAgents', shouldContinue, {
+            runAgents: 'runAgents',
+            [END]: END,
+        });
+
+    // Compile with checkpointing (enables state persistence and resume)
+    const checkpointer = new MemorySaver();
+
+    return graph.compile({
+        checkpointer,
+        // Add run name for LangSmith tracing
+    }).withConfig({
+        runName: 'CommitEvaluationWorkflow',
+    });
+}
