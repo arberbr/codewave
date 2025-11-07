@@ -20,7 +20,7 @@ export class LLMService {
 
         if (!apiKey) {
             throw new Error(
-                `Missing API key for provider: ${provider}. Run: commit-evaluator config --set apiKeys.${provider}=<your-key>`,
+                `Missing API key for provider: ${provider}. Run: codewave config --set apiKeys.${provider}=<your-key>`,
             );
         }
 

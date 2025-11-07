@@ -1,489 +1,714 @@
-# CodeWave 🌊
+# CodeWave: AI-Powered Commit Intelligence
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
-[![LangChain](https://img.shields.io/badge/LangChain-1.0-green.svg)](https://langchain.com/)
+**Multi-agent conversational system for comprehensive code quality evaluation using a 7-pillar methodology.**
 
-> **AI-Powered Commit Intelligence**
-> 
-> Multi-agent conversational system for comprehensive code quality evaluation using the 7-pillar methodology. Powered by LangChain, LangGraph, and leading LLM providers (Anthropic Claude, OpenAI, Google Gemini).
+CodeWave is a sophisticated Node.js CLI tool that leverages multiple AI agents in a coordinated discussion framework to perform in-depth analysis of Git commits. Using LangChain, LangGraph, and multiple LLM providers, CodeWave generates beautiful interactive HTML reports with conversation timelines, detailed metrics, and actionable insights.
 
 ---
 
-## 🎯 Overview
+## Key Features
 
-**CodeWave** is a sophisticated AI-powered platform that evaluates Git commits through multi-agent conversations. Unlike traditional code review tools, CodeWave's agents engage in structured discussions across 3 rounds to reach consensus on code quality.
-
-### 🏛️ Specialized AI Agents
-
-- **Senior Reviewer Agent**: Code quality, maintainability, and best practices
-- **Developer Agent**: Implementation complexity and technical approach
-- **QA Engineer Agent**: Test coverage, edge cases, and quality assurance  
-- **Security Analyst Agent**: Security vulnerabilities and best practices
-- **Performance Specialist Agent**: Performance implications and optimizations
-- **Metrics Aggregator**: Quantitative scores using 7-pillar methodology
-
-### ⚡ Key Features
-
-✨ **3-Round Conversations**: Initial Assessment → Concerns → Validation & Agreement  
-🎯 **7-Pillar Methodology**: Comprehensive quality metrics (Impact, Tests, Quality, Complexity, Debt, etc.)  
-🎨 **Beautiful HTML Reports**: Interactive browser-based evaluation with conversation timeline  
-📊 **Batch Processing**: Evaluate multiple commits in parallel with real-time progress  
-🔧 **Config-Driven**: Zero `.env` files - interactive setup wizard  
-🤖 **Multi-LLM Support**: Anthropic Claude, OpenAI, Google Gemini  
-⚡ **LangGraph Workflows**: Production-ready state machines for agent orchestration  
-🔍 **RAG for Large Diffs**: Automatic vector store for commits >100KB  
+- **🤖 Multi-Agent Conversations**: 5 specialized AI agents discuss commits across 3 rounds (Initial Assessment → Concerns → Validation & Agreement)
+- **📊 7-Pillar Methodology**: Comprehensive evaluation across Code Quality, Complexity, Timing, Technical Debt, Functional Impact, and Test Coverage
+- **🎨 Interactive HTML Reports**: Beautiful, timeline-based reports with conversation history and metric visualization
+- **📈 Batch Processing**: Evaluate multiple commits with real-time progress tracking
+- **🧠 RAG (Retrieval-Augmented Generation)**: Automatic handling of large diffs (>100KB) using vector storage and semantic search
+- **🔌 Multi-LLM Support**: Works with Anthropic Claude, OpenAI GPT, and Google Gemini
+- **⚡ Production-Ready**: LangGraph-based state machines with comprehensive error handling
+- **💾 JSON Output**: Structured results for programmatic access and CI/CD integration
+- **🎯 Zero Configuration**: Interactive setup wizard with sensible defaults
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
+- **Node.js**: 18.0.0 or later
+- **npm**: 9.0.0 or later
+- **Git**: 2.0.0 or later
+- **LLM API Key**: Claude, OpenAI, or Google Gemini
 
-- **Node.js**: v18+ (tested on v20.19.24)
-- **npm**: v9+
-- **Git**: For generating commit diffs
-- **LLM API Key**: OpenAI, Anthropic, or Google Gemini
-
-### Quick Start
+### Install from npm
 
 ```bash
-# Clone repository
-git clone <repository-url>
+npm install -g codewave
+```
+
+### Local Development
+
+```bash
+git clone <repo-url>
 cd codewave
-
-# Install dependencies
 npm install
-
-# Build TypeScript
 npm run build
-
-# Interactive setup (first time)
-node dist/cli/index.js config --init
-
-# Evaluate a single commit
-node dist/cli/index.js evaluate last-commit.diff
-
-# Batch evaluate recent commits
-node dist/cli/index.js batch --repo /path/to/repo --count 10
 ```
 
 ---
 
-## 🚀 Usage
+## Quick Start
 
-### Single Commit Evaluation
-
-```bash
-# Evaluate a specific commit
-node dist/cli/index.js evaluate last-commit.diff
-```
-
-### Batch Commit Evaluation
+### 1. First-Time Setup
 
 ```bash
-# Evaluate last 5 commits from a repository
-node dist/cli/index.js batch --repo /path/to/repo --count 5
-
-# Evaluate commits within date range
-node dist/cli/index.js batch --repo . --since "2024-01-01" --until "2024-12-31"
+codewave config
 ```
 
-### Generate Diff File
+This launches an interactive wizard where you'll configure:
+- **LLM Provider**: Choose Anthropic Claude, OpenAI, or Google Gemini
+- **API Keys**: Set your LLM provider credentials
+- **Model Selection**: Pick your preferred model for each provider
+- **Default Settings**: Configure batch size, output directory, and reporting preferences
+
+Configuration is stored securely and requires only one-time setup.
+
+### 2. Evaluate a Single Commit
 
 ```bash
-# Get diff of last commit
-git show HEAD > last-commit.diff
-
-# Or diff between branches
-git diff main..feature-branch > branch-diff.diff
-```
-
-### Output Structure
-
-Evaluations are organized in **`.evaluated-commits/`** with the following structure:
-
-```
-.evaluated-commits/
-└── [commit-hash]_[timestamp]/
-    ├── report.html     # Main HTML report (Bootstrap UI)
-    ├── results.json    # Full JSON results
-    ├── commit.diff     # Original commit diff
-    └── summary.txt     # Quick summary with metrics
+codewave evaluate <commit-hash>
 ```
 
 **Example:**
-```
-.evaluated-commits/
-└── 5581f306_2025-11-05_13-29-11/
-    ├── report.html
-    ├── results.json
-    ├── commit.diff
-    └── summary.txt
+```bash
+codewave evaluate HEAD
+codewave evaluate a1b2c3d
 ```
 
-**Benefits:**
-- 📁 **Organized by commit**: Each evaluation has its own directory
-- 🔍 **Traceable**: Commit hash + timestamp for easy identification
-- 📝 **Complete**: Original diff, JSON results, HTML report, and summary
-- 🗂️ **Gitignored**: `.evaluated-commits/` automatically excluded from git
+The system will:
+1. Fetch the commit details from the Git repository
+2. Extract the diff and metadata
+3. Run multi-agent conversation workflow
+4. Generate interactive HTML report and JSON results
 
-### Example Workflow
+### 3. Evaluate Multiple Commits (Batch Mode)
 
 ```bash
-# 1. Create diff file
-git show HEAD > my-commit.diff
-
-# 2. Run evaluation
-node dist/cli/index.js evaluate my-commit.diff
-
-# Output:
-# ✅ Evaluation complete!
-# 📁 Output directory: .evaluated-commits/5581f306_2025-11-05_13-29-11
-#    📄 report.html   - Main HTML report
-#    📋 results.json  - Full JSON results
-#    📝 commit.diff   - Original diff
-#    📊 summary.txt   - Quick summary
-
-# 3. View results
-# Open .evaluated-commits/5581f306_2025-11-05_13-29-11/report.html in browser
+codewave batch-evaluate [options]
 ```
 
-### Compare Multiple Commits
-
+**Examples:**
 ```bash
-# Evaluate multiple commits - each gets its own directory
-git show HEAD~2 > commit1.diff
-git show HEAD~1 > commit2.diff
-git show HEAD > commit3.diff
+# Evaluate last 10 commits on current branch
+codewave batch-evaluate --count 10
 
-node dist/cli/index.js evaluate commit1.diff
-node dist/cli/index.js evaluate commit2.diff
-node dist/cli/index.js evaluate commit3.diff
+# Evaluate commits in date range
+codewave batch-evaluate --since "2024-01-01" --until "2024-01-31"
 
-# View all evaluations
-ls .evaluated-commits/
-# a1b2c3d4_2025-11-05_10-15-30/
-# e5f6g7h8_2025-11-05_11-20-45/
-# 5581f306_2025-11-05_13-29-11/
+# Evaluate with custom output directory
+codewave batch-evaluate --count 5 --output "./reports"
 ```
 
 ---
 
-## ⚙️ Configuration
+## Output Structure
 
-### Config File: `.commit-evaluator.config.json`
-
-Create a config file in your project root:
-
-```json
-{
-  "llm": {
-    "provider": "anthropic",
-    "model": "claude-3-5-sonnet-20241022",
-    "temperature": 0.2,
-    "maxTokens": 4096,
-    "maxInputTokens": 200000,
-    "tokenBuffer": 1000,
-    "apiKey": "sk-ant-api03-..."
-  },
-  "agents": {
-    "enabled": ["senior-reviewer", "developer", "qa-engineer", "metrics"],
-    "parallel": false,
-    "timeout": 300000,
-    "retries": 2
-  },
-  "logging": {
-    "level": "info",
-    "file": "commit-evaluator.log",
-    "console": true
-  },
-  "tracing": {
-    "enabled": false,
-    "project": "commit-evaluator"
-  }
-}
-```
-
-### Interactive Setup
-
-If no config file exists, the CLI will prompt you for required settings:
+Evaluation results are organized in `.evaluated-commits/` directory:
 
 ```
-? Select LLM provider: (Use arrow keys)
-  ❯ anthropic
-    openai
-    google
-
-? Enter model name: claude-3-5-sonnet-20241022
-
-? Enter API key: ****************************************
+.evaluated-commits/
+├── a1b2c3d_2024-01-15_10-30-45/
+│   ├── report.html              # Interactive HTML report with conversation timeline
+│   ├── results.json             # Full evaluation data with all metrics
+│   ├── commit.diff              # Original commit diff
+│   └── summary.txt              # Quick text summary
+├── x9y8z7w_2024-01-15_11-15-20/
+│   ├── report.html
+│   ├── results.json
+│   ├── commit.diff
+│   └── summary.txt
 ```
+
+### Output Files Explained
+
+#### `report.html`
+Interactive report featuring:
+- Commit metadata (hash, author, date, message)
+- Agent roles and responsibilities
+- Round-by-round conversation timeline
+- Evolution of metrics across discussion rounds
+- Final consensus scores and insights
+- Key concerns and recommendations
+- Beautiful responsive design
+
+#### `results.json`
+Structured data including:
+- Commit information and diff
+- Full conversation transcript
+- All agent responses and reasoning
+- Evolution of metrics (Initial → Final)
+- Consensus scores and weights
+- Processing metadata (tokens used, cost, duration)
+
+#### `commit.diff`
+Original unified diff format for reference and archival.
+
+#### `summary.txt`
+Quick text summary with key metrics and top 3 recommendations.
+
+---
+
+## CLI Commands
+
+### `codewave evaluate`
+
+Evaluate a single commit with detailed multi-agent analysis.
+
+```bash
+codewave evaluate <commit-hash> [options]
+```
+
+**Arguments:**
+- `<commit-hash>` - Git commit hash or reference (HEAD, branch name, etc.)
+
+**Options:**
+- `-o, --output <dir>` - Output directory (default: `.evaluated-commits`)
+- `--repo <path>` - Git repository path (default: current directory)
+- `--format <format>` - Output format: `json`, `html`, `markdown` (default: all)
+- `--verbose` - Enable verbose logging
+- `--no-report` - Skip HTML report generation
+- `--model <model>` - Override configured LLM model
+
+**Example:**
+```bash
+codewave evaluate HEAD -o ./reports --verbose
+codewave evaluate abc1234 --format json --output ./data
+```
+
+### `codewave batch-evaluate`
+
+Evaluate multiple commits with progress tracking.
+
+```bash
+codewave batch-evaluate [options]
+```
+
+**Options:**
+- `--count <number>` - Number of commits to evaluate (default: 10)
+- `--since <date>` - Start date (ISO format or natural language)
+- `--until <date>` - End date (ISO format or natural language)
+- `--branch <branch>` - Branch to evaluate (default: current branch)
+- `-o, --output <dir>` - Output directory (default: `.evaluated-commits`)
+- `--parallel <number>` - Parallel evaluations (default: 3, max: 5)
+- `--skip-errors` - Continue on evaluation errors
+- `--verbose` - Enable verbose logging
+
+**Examples:**
+```bash
+codewave batch-evaluate --count 20
+codewave batch-evaluate --since "2024-01-01" --until "2024-01-31"
+codewave batch-evaluate --branch develop --count 50 --parallel 5
+```
+
+### `codewave config`
+
+Manage configuration settings.
+
+```bash
+codewave config [command]
+```
+
+**Commands:**
+- `codewave config` - Interactive setup wizard
+- `codewave config show` - Display current configuration
+- `codewave config set <key> <value>` - Set specific configuration value
+- `codewave config reset` - Reset to defaults
+
+**Examples:**
+```bash
+codewave config
+codewave config show
+codewave config set model claude-3-5-sonnet-20241022
+codewave config set batch-size 20
+```
+
+---
+
+## Configuration
+
+CodeWave requires minimal configuration. On first run, use `codewave config` to set up your LLM provider.
+
+### Configuration File Location
+
+- **macOS/Linux**: `~/.codewave/config.json`
+- **Windows**: `%APPDATA%\codewave\config.json`
 
 ### Configuration Options
 
-#### LLM Settings
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `provider` | `'anthropic' \| 'openai' \| 'google'` | `'anthropic'` | LLM provider |
-| `model` | `string` | `'claude-3-5-sonnet-20241022'` | Model identifier |
-| `temperature` | `number` | `0.2` | Sampling temperature (0-1) |
-| `maxTokens` | `number` | `4096` | Max output tokens |
-| `maxInputTokens` | `number` | `200000` | Max input tokens |
-| `tokenBuffer` | `number` | `1000` | Token safety buffer |
-| `apiKey` | `string` | - | API key (or prompted) |
-
-#### Agent Settings
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enabled` | `string[]` | All agents | Agents to run |
-| `parallel` | `boolean` | `false` | Run agents in parallel |
-| `timeout` | `number` | `300000` | Timeout per agent (ms) |
-| `retries` | `number` | `2` | Discussion rounds |
-
-#### Logging Settings
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `level` | `'debug' \| 'info' \| 'warn' \| 'error'` | `'info'` | Log verbosity |
-| `file` | `string` | `'commit-evaluator.log'` | Log file path |
-| `console` | `boolean` | `true` | Console logging |
-
----
-
-## 🤖 Agents
-
-### Senior Reviewer Agent
-
-**Focus**: Code quality, maintainability, best practices
-
-**Output**:
-- **Summary**: High-level assessment of code changes
-- **Details**: Analysis of readability, maintainability, design patterns
-- **Metrics**: 
-  - `codeQuality` (0-10): Overall code quality score
-  - `maintainability` (0-10): Ease of maintenance
-  - `bestPractices` (0-10): Adherence to standards
-
-### Developer Agent
-
-**Focus**: Implementation approach, technical complexity
-
-**Output**:
-- **Summary**: Implementation quality and technical decisions
-- **Details**: Architecture, error handling, performance considerations
-- **Metrics**:
-  - `implementationQuality` (0-10): Implementation approach
-  - `technicalDebt` (0-10): Introduced technical debt
-  - `complexity` (0-10): Code complexity
-
-### QA Engineer Agent
-
-**Focus**: Testing, edge cases, quality assurance
-
-**Output**:
-- **Summary**: Test coverage and quality assessment
-- **Details**: Test completeness, edge case handling, validation
-- **Metrics**:
-  - `testCoverage` (0-10): Test completeness
-  - `edgeCaseHandling` (0-10): Edge case coverage
-  - `qualityAssurance` (0-10): Overall QA quality
-
-### Metrics Agent
-
-**Focus**: Aggregate quantitative analysis
-
-**Output**:
-- **Summary**: Overall commit evaluation
-- **Details**: Statistical analysis of all agent scores
-- **Metrics**:
-  - Averages of all numeric metrics
-  - Min/max scores across agents
-  - Overall commit quality score
-
----
-
-## 🏗️ Architecture
-
-### Project Structure
-
-```
-commit-evaluator-app/
-├── cli/
-│   ├── index.ts                    # CLI entry point
-│   └── commands/
-│       └── evaluate-command.ts     # Evaluate command handler
-├── src/
-│   ├── index.ts                    # Main entry
-│   ├── agents/
-│   │   ├── agent.interface.ts      # Agent interface
-│   │   ├── agent-registry.ts       # Agent registration
-│   │   ├── base-agent-workflow.ts  # Base LCEL workflow
-│   │   ├── senior-reviewer-agent.ts
-│   │   ├── developer-agent.ts
-│   │   ├── qa-engineer-agent.ts
-│   │   └── metrics-agent.ts
-│   ├── config/
-│   │   ├── config.interface.ts     # Config type definitions
-│   │   ├── config-loader.ts        # Config loading + prompts
-│   │   └── default-config.ts       # Default values
-│   ├── formatters/
-│   │   └── html-report-formatter.ts # HTML generation
-│   ├── llm/
-│   │   └── llm-service.ts          # Multi-provider LLM service
-│   ├── orchestrator/
-│   │   └── commit-evaluation-orchestrator.ts # Agent coordination
-│   └── types/
-│       └── agent.types.ts          # Type definitions
-├── test/
-│   └── commit-evaluator.e2e-spec.ts
-├── index.html                      # HTML report viewer
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
-### Key Design Patterns
-
-#### 1. Multi-Agent Orchestration
-
-```typescript
-// Orchestrator runs agents in discussion rounds
-for (let round = 0; round < config.agents.retries; round++) {
-  for (const agent of agents) {
-    const result = await agent.execute(context);
-    context.agentResults.push(result);
-  }
+```json
+{
+  "llmProvider": "anthropic",
+  "model": "claude-3-5-sonnet-20241022",
+  "apiKey": "sk-ant-...",
+  "apiBaseUrl": null,
+  "outputDirectory": ".evaluated-commits",
+  "defaultBatchSize": 10,
+  "parallelEvaluations": 3,
+  "maxTokensPerRequest": 4000,
+  "enableRag": true,
+  "ragChunkSize": 2000,
+  "vectorStoreType": "memory",
+  "reportFormat": "html",
+  "verbose": false
 }
 ```
 
-#### 2. LangChain LCEL Workflows
+### Environment Variables
+
+You can override configuration using environment variables:
+
+```bash
+# Set LLM provider
+export CODEWAVE_LLM_PROVIDER=anthropic
+export CODEWAVE_API_KEY=sk-ant-...
+export CODEWAVE_MODEL=claude-3-5-sonnet-20241022
+
+# Set output directory
+export CODEWAVE_OUTPUT_DIR=./reports
+
+# Enable verbose logging
+export CODEWAVE_VERBOSE=true
+
+# Run evaluation
+codewave evaluate HEAD
+```
+
+---
+
+## The 7-Pillar Evaluation Methodology
+
+CodeWave evaluates commits across 7 carefully chosen dimensions, with each pillar assigned to a specialized AI agent:
+
+### Pillar 1: Code Quality (1-10)
+**Agent**: Developer Reviewer
+**Description**: Evaluates code correctness, design patterns, adherence to best practices, readability, and potential bugs.
+**Weights**: Critical for production quality and maintainability.
+
+### Pillar 2: Code Complexity (10-1, Inverted)
+**Agent**: Senior Architect
+**Description**: Measures cyclomatic complexity, cognitive complexity, maintainability. Higher score = Lower complexity.
+**Scale**: 10 (simple) to 1 (very complex)
+**Weights**: Critical for long-term maintenance and team velocity.
+
+### Pillar 3: Ideal Time Hours (Estimate)
+**Agent**: Business Analyst
+**Description**: Estimates ideal development time under optimal conditions (clear requirements, no interruptions).
+**Scale**: Hours (0.5 to 80)
+**Weights**: Baseline for productivity metrics.
+
+### Pillar 4: Actual Time Hours (Estimate)
+**Agent**: Developer Author
+**Description**: Actual time taken to implement (including research, debugging, iterations).
+**Scale**: Hours (0.5 to 160)
+**Weights**: Identifies scope creep and process inefficiencies.
+
+### Pillar 5: Technical Debt Hours (+/-)
+**Agent**: Senior Architect
+**Description**: Positive = Additional debt introduced; Negative = Debt reduced/eliminated.
+**Scale**: Hours (+/- 0 to 40)
+**Weights**: Critical for assessing long-term codebase health.
+
+### Pillar 6: Functional Impact (1-10)
+**Agent**: Business Analyst
+**Description**: User-facing impact, business value, feature completeness, and alignment with requirements.
+**Scale**: 1 (no impact) to 10 (transformative)
+**Weights**: Aligns engineering efforts with business goals.
+
+### Pillar 7: Test Coverage (1-10)
+**Agent**: QA Engineer
+**Description**: Comprehensiveness of tests: unit, integration, edge cases, error scenarios.
+**Scale**: 1 (no tests) to 10 (comprehensive coverage)
+**Weights**: Critical for reliability and preventing regressions.
+
+---
+
+## The 5 AI Agents
+
+### 1. Business Analyst (🎯)
+**Role**: Strategic stakeholder representing business value and user impact.
+**Metrics**: Ideal Time Hours, Functional Impact
+**Responsibilities**:
+- Assess business value and feature completeness
+- Estimate ideal development time
+- Evaluate functional impact on users
+- Consider market alignment and competitive advantage
+
+### 2. Developer Author (👨‍💻)
+**Role**: Original implementation owner providing implementation insights.
+**Metrics**: Actual Time Hours
+**Responsibilities**:
+- Report actual development time
+- Explain implementation decisions
+- Discuss challenges and blockers encountered
+- Provide context for complexity and time variance
+
+### 3. Developer Reviewer (🔍)
+**Role**: Code quality auditor ensuring production readiness.
+**Metrics**: Code Quality
+**Responsibilities**:
+- Evaluate code correctness and design patterns
+- Identify potential bugs and security issues
+- Assess readability and maintainability
+- Recommend refactoring opportunities
+
+### 4. Senior Architect (🏛️)
+**Role**: Technical leader focused on scalability, design, and debt.
+**Metrics**: Code Complexity, Technical Debt Hours
+**Responsibilities**:
+- Assess architectural decisions and scalability
+- Measure code complexity and maintainability
+- Estimate technical debt introduced or reduced
+- Recommend long-term improvements
+
+### 5. QA Engineer (🧪)
+**Role**: Quality assurance specialist ensuring reliability.
+**Metrics**: Test Coverage
+**Responsibilities**:
+- Evaluate test coverage and comprehensiveness
+- Identify untested edge cases and error scenarios
+- Assess reliability and resilience
+- Recommend testing improvements
+
+---
+
+## Multi-Round Conversation Framework
+
+CodeWave's evaluation happens across 3 structured rounds:
+
+### Round 1: Initial Assessment
+Each agent independently evaluates the commit against their pillar metrics, providing initial scores and reasoning.
+
+**Duration**: ~30-60 seconds
+**Output**: Initial scores, concerns, and observations
+
+### Round 2: Concerns & Cross-Examination
+Agents present their concerns and challenge each other's assumptions. This creates a realistic discussion where different perspectives can influence thinking.
+
+**Duration**: ~30-90 seconds
+**Output**: Refined perspectives, acknowledged concerns, potential consensus areas
+
+### Round 3: Validation & Agreement
+Agents finalize their positions, considering all previous inputs. Final scores are calculated with a weighted consensus algorithm.
+
+**Duration**: ~20-60 seconds
+**Output**: Final scores, consensus reasoning, and agreed-upon recommendations
+
+---
+
+## Advanced Features
+
+### Retrieval-Augmented Generation (RAG) for Large Diffs
+
+When commits exceed 100KB (configurable):
+1. Diff is chunked into semantic segments
+2. Vector embeddings generated for each chunk
+3. Agents query most relevant chunks instead of processing entire diff
+4. Reduces tokens used and speeds up evaluation
+
+**Configuration**:
+```bash
+codewave config set enable-rag true
+codewave config set rag-chunk-size 2000
+codewave config set rag-threshold 102400
+```
+
+### Multi-LLM Support
+
+Choose your LLM provider based on your needs:
+
+**Anthropic Claude**
+- Best for code analysis and reasoning
+- Models: claude-3-5-sonnet-20241022, claude-3-opus-20250219
+- Recommended: Default choice for optimal results
+
+**OpenAI GPT**
+- Excellent multi-agent reasoning
+- Models: gpt-4o, gpt-4-turbo, gpt-4
+- Note: May have rate limits for batch processing
+
+**Google Gemini**
+- Cost-effective option
+- Models: gemini-2.0-flash, gemini-1.5-pro
+- Good for high-volume batch processing
+
+**Example**: Switch to OpenAI
+```bash
+codewave config set llm-provider openai
+codewave config set model gpt-4o
+codewave config set api-key sk-...
+```
+
+### Batch Evaluation with Progress Tracking
+
+Monitor evaluations in real-time:
+
+```bash
+codewave batch-evaluate --count 100 --verbose
+```
+
+**Progress Display**:
+- Overall completion percentage
+- Current commit being evaluated
+- Elapsed time and ETA
+- Tokens used and estimated cost
+- Success/error count
+- Average evaluation time per commit
+
+### JSON Output for CI/CD Integration
+
+All results are available as structured JSON for programmatic access:
+
+```bash
+codewave evaluate HEAD --format json
+```
+
+**Use cases**:
+- Integrate with CI/CD pipelines
+- Custom reporting and dashboards
+- Machine learning on evaluation metrics
+- Automated quality gates
+
+---
+
+## Examples
+
+### Example 1: Evaluate Latest 5 Commits
+
+```bash
+codewave batch-evaluate --count 5 --verbose
+```
+
+**Output**:
+```
+CodeWave - Commit Intelligence Engine
+================================
+
+Evaluating 5 commits...
+[████████████████████████████████] 100% (5/5)
+
+Evaluation Summary:
+├── Total evaluated: 5
+├── Successful: 5
+├── Failed: 0
+├── Average time: 2.3s per commit
+├── Total tokens: 18,450
+└── Output: .evaluated-commits/
+
+Reports generated:
+  ✓ a1b2c3d - "feat: add user authentication" (Quality: 8.5/10)
+  ✓ x9y8z7w - "fix: resolve memory leak" (Quality: 9.0/10)
+  ✓ m5n4o3p - "docs: update README" (Quality: 7.0/10)
+  ✓ k1l2m3n - "refactor: simplify payment module" (Quality: 8.5/10)
+  ✓ j0i9h8g - "test: add integration tests" (Quality: 8.0/10)
+```
+
+### Example 2: Focused Analysis with Custom Output
+
+```bash
+codewave evaluate feature/auth --output ./analysis --format json --verbose
+```
+
+### Example 3: Batch Processing with Error Handling
+
+```bash
+codewave batch-evaluate --since "2024-01-01" --until "2024-01-31" --skip-errors --parallel 5
+```
+
+---
+
+## Project Structure
+
+```
+codewave/
+├── cli/                           # CLI entry points and commands
+│   ├── index.ts                   # Main CLI entry point (Commander setup)
+│   ├── commands/
+│   │   ├── evaluate-command.ts    # Single commit evaluation
+│   │   ├── batch-evaluate-command.ts   # Multiple commits
+│   │   └── config.command.ts      # Configuration management
+│   └── utils/
+│       ├── progress-tracker.ts    # Progress bar UI
+│       └── shared.utils.ts        # CLI utilities
+├── src/
+│   ├── agents/                    # AI agent implementations
+│   │   ├── base-agent-workflow.ts # Base agent class
+│   │   ├── business-analyst-agent.ts
+│   │   ├── developer-author-agent.ts
+│   │   ├── developer-reviewer-agent.ts
+│   │   ├── qa-engineer-agent.ts
+│   │   └── senior-architect-agent.ts
+│   ├── config/                    # Configuration management
+│   │   ├── config.loader.ts       # Interactive config loader
+│   │   └── types.ts               # Config type definitions
+│   ├── llm/                       # LLM provider integration
+│   │   ├── llm.service.ts         # Multi-provider service
+│   │   └── token-manager.ts       # Token tracking
+│   ├── formatters/                # Output formatting
+│   │   ├── html-report-formatter-enhanced.ts
+│   │   ├── json-formatter.ts
+│   │   └── markdown-formatter.ts
+│   ├── orchestrator/              # LangGraph workflow
+│   │   └── orchestrator.ts        # Multi-round conversation
+│   ├── services/                  # Business logic
+│   │   ├── commit.service.ts      # Git operations
+│   │   ├── vector-store.service.ts # RAG support
+│   │   └── evaluation.service.ts
+│   ├── types/                     # Type definitions
+│   │   ├── agent.types.ts
+│   │   ├── commit.types.ts
+│   │   └── output.types.ts
+│   ├── constants/                 # Constants and weights
+│   │   └── agent-weights.ts
+│   └── utils/                     # Shared utilities
+│       ├── token-utils.ts
+│       └── file-utils.ts
+├── package.json                   # npm configuration
+├── tsconfig.json                  # TypeScript config
+└── README.md                      # This file
+```
+
+---
+
+## Contributing
+
+We welcome contributions! Please follow these guidelines:
+
+1. **Fork and Clone**
+   ```bash
+   git clone <your-fork>
+   cd codewave
+   ```
+
+2. **Create Feature Branch**
+   ```bash
+   git checkout -b feature/your-feature
+   ```
+
+3. **Make Changes and Test**
+   ```bash
+   npm run build
+   npm test
+   ```
+
+4. **Ensure Code Quality**
+   ```bash
+   npm run lint
+   npm run prettier
+   ```
+
+5. **Submit Pull Request**
+   - Include clear description of changes
+   - Reference related issues
+   - Include test cases for new features
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**Q: "API Key not found" error**
+```
+A: Run 'codewave config' to set up your LLM provider credentials.
+   Alternatively, set CODEWAVE_API_KEY environment variable.
+```
+
+**Q: Evaluation times out**
+```
+A: For large commits (>100KB), enable RAG:
+   codewave config set enable-rag true
+   RAG automatically handles large diffs by chunking and semantic search.
+```
+
+**Q: "Too many requests" error from LLM provider**
+```
+A: Reduce parallel evaluations:
+   codewave batch-evaluate --parallel 2
+   Or use a different LLM provider with higher rate limits.
+```
+
+**Q: Results directory growing too large**
+```
+A: Archive old evaluations:
+   find .evaluated-commits -type f -mtime +30 -delete
+   Or specify custom output directory:
+   codewave evaluate HEAD -o ./archive
+```
+
+**Q: Memory issues during batch processing**
+```
+A: Reduce batch size and parallel count:
+   codewave batch-evaluate --count 10 --parallel 1
+```
+
+See [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) for more detailed solutions.
+
+---
+
+## Performance Considerations
+
+### Evaluation Time
+- **Average**: 2-4 seconds per commit
+- **Small commits** (<1KB): 1-2 seconds
+- **Medium commits** (1-100KB): 2-5 seconds
+- **Large commits** (>100KB with RAG): 3-8 seconds
+
+### Token Usage
+- **Average**: 3,000-5,000 tokens per evaluation
+- **Small commits**: 2,000-3,000 tokens
+- **Complex commits**: 4,000-6,000 tokens
+- **RAG-assisted**: 2,500-4,000 tokens (saved via chunking)
+
+### Cost Estimates (using Claude 3.5 Sonnet)
+- **Single evaluation**: ~$0.015-0.030
+- **100 commits**: ~$1.50-3.00
+- **1,000 commits**: ~$15-30
+
+---
+
+## API Reference
+
+For programmatic usage, see [API.md](./docs/API.md).
+
+### Basic Usage
 
 ```typescript
-// Each agent uses RunnableSequence for LLM chains
-const chain = RunnableSequence.from([
-  promptBuilder,
-  llmModel,
-  contentExtractor,
-  outputParser
-]);
+import { CodeWaveEvaluator } from 'codewave';
 
-const result = await chain.invoke(input);
-```
+const evaluator = new CodeWaveEvaluator({
+  llmProvider: 'anthropic',
+  model: 'claude-3-5-sonnet-20241022',
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
-#### 3. Config-Driven Execution
-
-```typescript
-// No .env files - config loaded from JSON or interactive prompts
-const config = await ConfigLoader.load();
-const llm = LLMService.getChatModel(config.llm);
+const result = await evaluator.evaluate('HEAD');
+console.log('Code Quality:', result.metrics.codeQuality);
+console.log('Consensus:', result.consensus);
 ```
 
 ---
 
-## 📊 HTML Reports
+## License
 
-### Report Structure
-
-The generated HTML report includes:
-
-1. **Header**: Evaluation timestamp, configuration summary
-2. **Agent Sections**: Each agent's analysis with:
-   - Summary (high-level findings)
-   - Details (in-depth analysis)
-   - Metrics (quantitative scores)
-3. **Footer**: Metadata and generation info
-
-### Example Report
-
-```html
-<!-- Generated report.html -->
-<div class="agent-section">
-  <h2>Senior Reviewer Analysis</h2>
-  <div class="summary">
-    <h3>Summary</h3>
-    <p>The commit introduces well-structured TypeScript code...</p>
-  </div>
-  <div class="details">
-    <h3>Details</h3>
-    <p>- Code follows TypeScript best practices<br>
-       - Proper error handling implemented<br>
-       - Clear separation of concerns</p>
-  </div>
-  <div class="metrics">
-    <h3>Metrics</h3>
-    <table>
-      <tr><td>Code Quality</td><td>8/10</td></tr>
-      <tr><td>Maintainability</td><td>7/10</td></tr>
-    </table>
-  </div>
-</div>
-```
+MIT License - see [LICENSE](./LICENSE) file for details.
 
 ---
 
-## 🔧 Development
+## Support & Community
 
-### Build
-
-```bash
-npm run build
-```
-
-### Lint
-
-```bash
-npm run lint
-```
-
-### Format
-
-```bash
-npm run prettier
-```
-
-### Testing
-
-```bash
-# Run end-to-end tests
-npm run test:e2e
-```
+- **Issues**: [GitHub Issues](https://github.com/techdebtgpt/codewave/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/techdebtgpt/codewave/discussions)
+- **Twitter**: [@TechDebtGPT](https://twitter.com/techdebtgpt)
+- **Email**: support@techdebtgpt.com
 
 ---
 
-## 🤝 Contributing
+## Acknowledgments
 
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Built with ❤️ by the TechDebtGPT team using:
+- [LangChain](https://www.langchain.com/) - AI/LLM orchestration
+- [LangGraph](https://www.langchain.com/langgraph) - Workflow state machines
+- [Commander.js](https://github.com/tj/commander.js) - CLI framework
+- [Chalk](https://github.com/chalk/chalk) - Terminal styling
 
 ---
 
-## 📝 License
-
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
-
----
-
-## 🙏 Acknowledgments
-
-- Inspired by [architecture-doc-generator](https://github.com/your-org/architecture-doc-generator)
-- Built with [LangChain](https://langchain.com/) LCEL workflows
-- Powered by OpenAI, Anthropic, and Google Gemini LLMs
-
----
-
-## 📚 Related Projects
-
-- **[architecture-doc-generator](https://github.com/your-org/architecture-doc-generator)**: AI-powered architecture documentation generator
-- **[tech-debt-api](https://github.com/your-org/tech-debt-api)**: NestJS-based technical debt analysis API
-
----
-
-**Made with ❤️ by the TechDebt team**
+**CodeWave** - Making commit intelligence accessible to every team.

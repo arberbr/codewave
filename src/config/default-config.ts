@@ -30,7 +30,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     tracing: {
         enabled: false,
         apiKey: '',
-        project: 'commit-evaluator',
+        project: 'codewave',
         endpoint: 'https://api.smith.langchain.com',
     },
 };

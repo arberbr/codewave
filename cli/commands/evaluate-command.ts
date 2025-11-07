@@ -154,7 +154,7 @@ export async function runEvaluateCommand(args: string[]) {
         const commitHash = args[commitIdx + 1];
         if (!commitHash) {
             console.error(chalk.red('Error: --commit requires a commit hash'));
-            console.log('\nUsage: commit-evaluator evaluate --commit <hash> [--repo <path>]');
+            console.log('\nUsage: codewave evaluate --commit <hash> [--repo <path>]');
             process.exit(1);
         }
 
@@ -200,10 +200,10 @@ export async function runEvaluateCommand(args: string[]) {
     } else {
         console.error(chalk.red('Error: No input provided'));
         console.log('\nUsage:');
-        console.log('  commit-evaluator evaluate <diffFile>              # Evaluate from diff file');
-        console.log('  commit-evaluator evaluate --commit <hash>         # Evaluate specific commit');
-        console.log('  commit-evaluator evaluate --staged                # Evaluate staged changes');
-        console.log('  commit-evaluator evaluate --current               # Evaluate all current changes');
+        console.log('  codewave evaluate <diffFile>              # Evaluate from diff file');
+        console.log('  codewave evaluate --commit <hash>         # Evaluate specific commit');
+        console.log('  codewave evaluate --staged                # Evaluate staged changes');
+        console.log('  codewave evaluate --current               # Evaluate all current changes');
         console.log('\nOptions:');
         console.log('  --repo <path>   Repository path (default: current directory)');
         console.log('  --stream        Enable streaming output');
@@ -220,7 +220,7 @@ export async function runEvaluateCommand(args: string[]) {
         console.log(chalk.red('\n❌ No configuration found!\n'));
         console.log(chalk.yellow('You need to set up the configuration before evaluating commits.\n'));
         console.log(chalk.cyan('Quick setup:'));
-        console.log(chalk.white('  1. Run: ') + chalk.green('commit-evaluator config --init'));
+        console.log(chalk.white('  1. Run: ') + chalk.green('codewave config --init'));
         console.log(chalk.white('  2. Follow the interactive setup'));
         console.log(chalk.white('  3. Run evaluate again\n'));
         process.exit(1);
@@ -231,7 +231,7 @@ export async function runEvaluateCommand(args: string[]) {
 
     if (!config) {
         console.log(chalk.red('\n❌ Failed to load configuration file!\n'));
-        console.log(chalk.yellow('Run: commit-evaluator config --init\n'));
+        console.log(chalk.yellow('Run: codewave config --init\n'));
         process.exit(1);
     }
 
@@ -242,7 +242,7 @@ export async function runEvaluateCommand(args: string[]) {
     if (!apiKey) {
         console.log(chalk.red(`\n❌ No API key configured for provider: ${provider}\n`));
         console.log(chalk.yellow('Add your API key with:'));
-        console.log(chalk.white(`  commit-evaluator config --set apiKeys.${provider}=<your-api-key>\n`));
+        console.log(chalk.white(`  codewave config --set apiKeys.${provider}=<your-api-key>\n`));
         process.exit(1);
     }
 

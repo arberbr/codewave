@@ -687,13 +687,13 @@ function escapeHtml(text: string): string {
 
 function validateConfig(config: AppConfig) {
     if (!config.apiKeys.anthropic && !config.apiKeys.openai && !config.apiKeys.google) {
-        console.error('❌ Error: No API keys configured. Run `commit-evaluator config --init` first.');
+        console.error('❌ Error: No API keys configured. Run `codewave config --init` first.');
         process.exit(1);
     }
 }
 
 function printBatchUsage() {
-    console.log('Usage: commit-evaluator batch --repo <path> [options]');
+    console.log('Usage: codewave batch --repo <path> [options]');
     console.log('\nOptions:');
     console.log('  --repo, -r <path>      Path to git repository (required)');
     console.log('  --since <date>         Evaluate commits since this date (e.g., "2025-01-01")');
@@ -701,8 +701,8 @@ function printBatchUsage() {
     console.log('  --count, -n <number>   Evaluate last N commits');
     console.log('  --branch, -b <name>    Branch to evaluate (default: HEAD)');
     console.log('\nExamples:');
-    console.log('  commit-evaluator batch --repo /path/to/repo --count 10');
-    console.log('  commit-evaluator batch --repo /path/to/repo --since "2025-01-01"');
-    console.log('  commit-evaluator batch --repo /path/to/repo --since "2025-01-01" --until "2025-01-31"');
+    console.log('  codewave batch --repo /path/to/repo --count 10');
+    console.log('  codewave batch --repo /path/to/repo --since "2025-01-01"');
+    console.log('  codewave batch --repo /path/to/repo --since "2025-01-01" --until "2025-01-31"');
 }
 

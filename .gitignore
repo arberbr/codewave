@@ -1,8 +1,8 @@
 node_modules/
 dist/
 
-# Commit Evaluator configuration (contains API keys)
-.commit-evaluator.config.json
+# CodeWave configuration (contains API keys)
+.codewave.config.json
 
 # Evaluation results
 .evaluated-commits/

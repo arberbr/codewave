@@ -1,5 +1,5 @@
 // src/config/config-loader.ts
-// Loads config from .commit-evaluator.config.json - never prompts, requires config file
+// Loads config from .codewave.config.json - never prompts, requires config file
 
 import fs from 'fs';
 import path from 'path';
@@ -8,11 +8,11 @@ import { AppConfig } from './config.interface';
 
 /**
  * Load configuration from file
- * @param configPath Optional path to config file (defaults to .commit-evaluator.config.json in cwd)
+ * @param configPath Optional path to config file (defaults to .codewave.config.json in cwd)
  * @returns Merged configuration (file + defaults)
  */
 export function loadConfig(configPath?: string): AppConfig | null {
-    const resolvedPath = configPath || path.resolve(process.cwd(), '.commit-evaluator.config.json');
+    const resolvedPath = configPath || path.resolve(process.cwd(), '.codewave.config.json');
 
     // Check if config file exists
     if (!fs.existsSync(resolvedPath)) {
@@ -42,6 +42,6 @@ export function loadConfig(configPath?: string): AppConfig | null {
  * Check if config file exists
  */
 export function configExists(configPath?: string): boolean {
-    const resolvedPath = configPath || path.resolve(process.cwd(), '.commit-evaluator.config.json');
+    const resolvedPath = configPath || path.resolve(process.cwd(), '.codewave.config.json');
     return fs.existsSync(resolvedPath);
 }

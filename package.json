@@ -7,7 +7,15 @@
     "start": "node dist/index.js",
     "build": "tsc",
     "lint": "eslint . --ext .ts",
-    "prettier": "prettier --write '**/*.{ts,js,json,md}'"
+    "prettier": "prettier --write '**/*.{ts,js,json,md}'",
+    "docs": "echo 'CodeWave Documentation' && echo '' && echo 'Start at: docs/INDEX.md' && echo 'Main docs: README.md' && echo '' && ls -lah docs/*.md | awk '{print $9, \"(\" $5 \")\"}'",
+    "docs:readme": "echo 'Main Documentation: README.md'",
+    "docs:quick-ref": "cat docs/QUICK_REFERENCE.md | head -50",
+    "docs:cli": "cat docs/CLI.md | head -100",
+    "docs:api": "cat docs/API.md | head -100",
+    "test": "echo 'No tests configured'",
+    "prepublishOnly": "npm run build && npm run lint",
+    "prepack": "npm run build"
   },
   "bin": {
     "codewave": "cli/index.js"
@@ -32,6 +40,29 @@
   ],
   "author": "TechDebtGPT",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/techdebtgpt/codewave.git"
+  },
+  "bugs": {
+    "url": "https://github.com/techdebtgpt/codewave/issues"
+  },
+  "homepage": "https://github.com/techdebtgpt/codewave#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "files": [
+    "dist",
+    "cli",
+    "src",
+    "README.md",
+    "docs",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@langchain/anthropic": "^0.3.33",
     "@langchain/core": "^0.3.79",

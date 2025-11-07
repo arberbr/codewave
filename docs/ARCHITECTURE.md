@@ -1,0 +1,811 @@
+# CodeWave Architecture
+
+Complete technical architecture documentation for CodeWave system.
+
+## Table of Contents
+
+1. [System Overview](#system-overview)
+2. [Technology Stack](#technology-stack)
+3. [Core Components](#core-components)
+4. [Data Flow](#data-flow)
+5. [Multi-Agent Orchestration](#multi-agent-orchestration)
+6. [LLM Integration](#llm-integration)
+7. [RAG System](#rag-system)
+8. [Output Generation](#output-generation)
+9. [State Management](#state-management)
+10. [Error Handling](#error-handling)
+
+---
+
+## System Overview
+
+CodeWave is a multi-tier, event-driven system for AI-powered code review that combines:
+
+- **CLI Layer**: Interactive command-line interface for user interaction
+- **Orchestration Layer**: LangGraph-based workflow management
+- **Agent Layer**: 5 specialized AI agents with distinct expertise
+- **LLM Layer**: Multi-provider language model integration
+- **Storage Layer**: Commit data, embeddings, and evaluation results
+- **Output Layer**: Report generation in multiple formats
+
+### Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CLI LAYER                               │
+│  ┌──────────────┬──────────────┬──────────────────────┐   │
+│  │  Evaluate    │  Batch       │  Config              │   │
+│  │  Command     │  Evaluate    │  Management          │   │
+│  └──────┬───────┴──────┬───────┴────────┬─────────────┘   │
+└─────────┼──────────────┼────────────────┼─────────────────┘
+          │              │                │
+┌─────────▼──────────────▼────────────────▼─────────────────┐
+│                  ORCHESTRATION LAYER                       │
+│              (LangGraph Workflow Engine)                  │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Evaluation Orchestrator                           │  │
+│  │  - Round 1: Independent Assessment                │  │
+│  │  - Round 2: Concerns & Cross-examination          │  │
+│  │  - Round 3: Validation & Agreement                │  │
+│  │  - Consensus Calculation                          │  │
+│  └────────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  State Machine                                     │  │
+│  │  - Conversation History                           │  │
+│  │  - Metrics Tracking                               │  │
+│  │  - Error Recovery                                 │  │
+│  └────────────────────────────────────────────────────┘  │
+└────┬──────────────┬──────────────┬───────────────────────┘
+     │              │              │
+┌────▼──────────────▼──────────────▼────────────────────────┐
+│                  AGENT LAYER                              │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐           │
+│  │ BA   │ │ DA   │ │ DR   │ │ SA   │ │ QA   │           │
+│  │ 🎯   │ │ 👨‍💻   │ │ 🔍   │ │ 🏛️   │ │ 🧪   │           │
+│  └──┬───┘ └──┬───┘ └──┬───┘ └──┬───┘ └──┬───┘           │
+│     │        │        │        │        │                │
+│     └────────┼────────┼────────┼────────┘                │
+│              │        │        │                         │
+└──────────────┼────────┼────────┼──────────────────────────┘
+               │        │        │
+┌──────────────▼────────▼────────▼──────────────────────────┐
+│                  LLM LAYER                                │
+│  ┌────────────┬────────────┬────────────────────────┐   │
+│  │ Anthropic  │ OpenAI     │ Google Gemini          │   │
+│  │ Claude     │ GPT-4      │ Gemini Pro             │   │
+│  └────────────┴────────────┴────────────────────────┘   │
+│  ┌────────────────────────────────────────────────┐     │
+│  │ Token Manager                                  │     │
+│  │ - Token Counting                               │     │
+│  │ - Cost Estimation                              │     │
+│  │ - Rate Limiting                                │     │
+│  └────────────────────────────────────────────────┘     │
+└──────────────┬────────────────────────────────────────────┘
+               │
+┌──────────────▼────────────────────────────────────────────┐
+│              STORAGE & SERVICES LAYER                     │
+│  ┌──────────────────┐ ┌──────────────────────────────┐  │
+│  │ Git Service      │ │ Vector Store Service (RAG)   │  │
+│  │ - Commit Fetch   │ │ - Embeddings                 │  │
+│  │ - Diff Parsing   │ │ - Semantic Search            │  │
+│  │ - Metadata       │ │ - Chunking Strategy          │  │
+│  └──────────────────┘ └──────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ Evaluation Service                               │   │
+│  │ - Result Persistence                             │   │
+│  │ - Batch Management                               │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────────────────┐
+│            OUTPUT GENERATION LAYER                       │
+│  ┌──────────────┬──────────────┬──────────────┐         │
+│  │ HTML Report  │ JSON         │ Markdown     │         │
+│  │ Formatter    │ Formatter    │ Formatter    │         │
+│  └──────────────┴──────────────┴──────────────┘         │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Technology Stack
+
+### Runtime & Language
+- **Node.js**: 18.0.0+
+- **TypeScript**: 5.3.3+
+- **Runtime**: CommonJS modules
+
+### Core Dependencies
+
+#### AI & LLM Integration
+- **LangChain** (v0.3.36): Chain and agent orchestration
+- **LangGraph** (v0.2.74): State machine and workflow management
+- **@langchain/anthropic**: Claude API integration
+- **@langchain/openai**: OpenAI API integration
+- **@langchain/google-genai**: Google Gemini integration
+- **js-tiktoken**: Token counting for OpenAI models
+
+#### CLI & UI
+- **Commander.js** (v14.0.2): Command-line framework
+- **Inquirer.js** (v8.2.7): Interactive CLI prompts
+- **Chalk** (v4.1.2): Terminal color output
+- **Ora** (v5.4.1): Spinner/progress indicators
+- **cli-progress** (v3.12.0): Progress bars
+
+#### Utilities
+- **dotenv** (v17.2.3): Environment variable management
+
+### Development Dependencies
+- **TypeScript**: Type system
+- **ESLint**: Code linting
+- **Prettier**: Code formatting
+- **@types/node**: Node.js type definitions
+
+---
+
+## Core Components
+
+### 1. CLI Layer (`cli/`)
+
+Entry point for user interactions. Handles command routing and user-facing logic.
+
+#### Files:
+- `cli/index.ts` - Main CLI entry point (Commander setup)
+- `cli/commands/evaluate-command.ts` - Single commit evaluation
+- `cli/commands/batch-evaluate-command.ts` - Multiple commits
+- `cli/commands/config.command.ts` - Configuration management
+- `cli/utils/progress-tracker.ts` - Progress UI
+- `cli/utils/shared.utils.ts` - CLI utilities
+
+#### Responsibilities:
+- Parse command-line arguments
+- Display interactive setup wizard
+- Manage user configuration
+- Display real-time progress
+- Format and display results
+
+### 2. Agent Layer (`src/agents/`)
+
+Specialized AI agents with distinct expertise areas.
+
+#### Architecture:
+```
+BaseAgentWorkflow (Abstract)
+  ├── BusinessAnalystAgent
+  ├── DeveloperAuthorAgent
+  ├── DeveloperReviewerAgent
+  ├── SeniorArchitectAgent
+  └── QAEngineerAgent
+```
+
+#### Key Classes:
+
+**BaseAgentWorkflow**
+```typescript
+abstract class BaseAgentWorkflow {
+  abstract name: string;
+  abstract emoji: string;
+  abstract role: string;
+  abstract metrics: string[];
+
+  async assessCommit(context: AgentContext): Promise<AgentResponse>;
+  async raiseConcerns(context: AgentContext): Promise<AgentResponse>;
+  async validateAndAgree(context: AgentContext): Promise<AgentResponse>;
+
+  protected buildPrompt(systemRole: string, context: AgentContext): string;
+  protected parseResponse(response: string): AgentResponse;
+}
+```
+
+#### Workflow:
+1. Receive commit context and conversation history
+2. Generate specialized prompt based on agent role
+3. Call LLM service with prompt
+4. Parse structured response
+5. Extract metrics and reasoning
+6. Return structured agent response
+
+### 3. Orchestration Layer (`src/orchestrator/`)
+
+LangGraph-based workflow coordination for multi-round conversations.
+
+#### Key Component: `Orchestrator`
+
+```typescript
+class Orchestrator {
+  // Initialize with agents and LLM service
+  constructor(agents: Agent[], llmService: LLMService);
+
+  // Execute full evaluation workflow
+  async executeEvaluation(
+    commitData: CommitData,
+    conversationHistory: ConversationTurn[] = [],
+  ): Promise<EvaluationResult>;
+
+  // Internal methods for each round
+  private round1Independent Assessment(): Promise<AgentResponse[]>;
+  private round2CrossExamination(round1Responses: AgentResponse[]): Promise<AgentResponse[]>;
+  private round3FinalValidation(
+    round1Responses: AgentResponse[],
+    round2Responses: AgentResponse[],
+  ): Promise<AgentResponse[]>;
+
+  // Calculate consensus from all responses
+  private calculateConsensus(allResponses: AgentResponse[][]): ConsensusData;
+}
+```
+
+#### Workflow State Machine:
+
+```
+START
+  │
+  ├─► ROUND_1_ASSESSMENT
+  │   └─► All agents assess independently
+  │       State: { round: 1, responses: AgentResponse[] }
+  │
+  ├─► ROUND_2_CROSS_EXAMINATION
+  │   └─► Agents respond to each other's concerns
+  │       State: { round: 2, responses: AgentResponse[] }
+  │
+  ├─► ROUND_3_FINAL_VALIDATION
+  │   └─► Agents finalize positions
+  │       State: { round: 3, responses: AgentResponse[] }
+  │
+  ├─► CONSENSUS_CALCULATION
+  │   └─► Calculate final metrics and consensus
+  │       State: { consensus: ConsensusData, metrics: EvaluationMetrics }
+  │
+  └─► COMPLETE
+      Result: EvaluationResult
+```
+
+### 4. LLM Service Layer (`src/llm/`)
+
+Multi-provider LLM abstraction.
+
+#### Key Classes:
+
+**LLMService (Interface)**
+```typescript
+interface LLMService {
+  generateMessage(
+    systemPrompt: string,
+    userMessage: string,
+    options?: GenerateOptions,
+  ): Promise<string>;
+
+  countTokens(text: string): Promise<number>;
+  estimateCost(tokensUsed: number): Promise<number>;
+}
+```
+
+**Provider Implementations**:
+- `AnthropicLLMService` - Claude API
+- `OpenAILLMService` - GPT-4, GPT-4 Turbo
+- `GoogleLLMService` - Gemini
+
+#### Token Management (`TokenManager`):
+```typescript
+class TokenManager {
+  countTokens(text: string, model: string): number;
+  estimateCost(tokensUsed: number, model: string): number;
+  trackUsage(request: string, response: string): void;
+  getSummary(): TokenUsageSummary;
+}
+```
+
+### 5. Storage & Services Layer
+
+#### Git Service
+```typescript
+class CommitService {
+  getCommit(hash: string): Promise<CommitData>;
+  getCommitRange(since: string, until: string): Promise<CommitData[]>;
+  getDiff(hash: string): Promise<string>;
+}
+```
+
+#### Vector Store Service (RAG)
+```typescript
+class VectorStoreService {
+  addDocuments(texts: string[], metadata: Record<string, any>): Promise<void>;
+  similaritySearch(query: string, k?: number): Promise<string[]>;
+  clear(): Promise<void>;
+}
+```
+
+#### Evaluation Service
+```typescript
+class EvaluationService {
+  saveEvaluation(result: EvaluationResult): Promise<string>;
+  loadEvaluation(id: string): Promise<EvaluationResult>;
+  listEvaluations(): Promise<EvaluationResult[]>;
+}
+```
+
+### 6. Output Generation Layer (`src/formatters/`)
+
+#### Formatters:
+
+**HTMLReportFormatterEnhanced**
+- Generates interactive HTML reports
+- Timeline visualization
+- Agent role identification
+- Metric evolution display
+- Bootstrap-based responsive design
+
+**JSONFormatter**
+- Structured data export
+- Schema-validated output
+- Complete conversation history
+
+**MarkdownFormatter**
+- Human-readable transcripts
+- Suitable for documentation
+- Git-compatible format
+
+---
+
+## Data Flow
+
+### Evaluation Flow (High-Level)
+
+```
+User Input
+  │
+  ▼
+Parse Arguments & Config
+  │
+  ▼
+Fetch Commit from Git
+  │
+  ├─► Determine if Large Diff
+  │   ├─► If < 100KB: Process normally
+  │   └─► If > 100KB: Initialize RAG
+  │
+  ▼
+Orchestrator.executeEvaluation()
+  │
+  ├─► Round 1: All agents assess independently
+  │   ├─► Business Analyst → Functional Impact, Ideal Time
+  │   ├─► Developer Author → Actual Time
+  │   ├─► Developer Reviewer → Code Quality
+  │   ├─► Senior Architect → Complexity, Technical Debt
+  │   └─► QA Engineer → Test Coverage
+  │
+  ├─► Round 2: Cross-examination with concerns
+  │   └─► All agents respond to concerns from Round 1
+  │
+  ├─► Round 3: Final consensus positions
+  │   └─► All agents finalize scores and recommendations
+  │
+  ├─► Calculate Consensus
+  │   ├─► Weighted averaging of metrics
+  │   ├─► Confidence level calculation
+  │   ├─► Top concerns extraction
+  │   └─► Recommendations synthesis
+  │
+  ▼
+Generate Output
+  ├─► HTML Report (interactive)
+  ├─► JSON Results (structured data)
+  ├─► Markdown Transcript (documentation)
+  ├─► Text Summary (quick reference)
+  └─► Archive Original Diff
+  │
+  ▼
+Save to Output Directory
+  │
+  ▼
+Display Results to User
+```
+
+### Batch Evaluation Flow
+
+```
+User Input (count, date range, branch)
+  │
+  ▼
+Fetch Commit List from Git
+  │
+  ▼
+Initialize Progress Tracker
+  │
+  ├─► Split into parallel queues (default: 3)
+  │
+  ├─► For Each Queue:
+  │   └─► While Commits Remaining:
+  │       ├─► Evaluate commit (same as single flow)
+  │       ├─► Update progress bar
+  │       ├─► Handle errors (skip or halt)
+  │       └─► Track metrics (quality, coverage, cost)
+  │
+  ▼
+Generate Summary Report
+  ├─► Statistics (avg quality, coverage, time)
+  ├─► Cost analysis
+  ├─► Error log
+  └─► Individual results list
+  │
+  ▼
+Display Summary to User
+```
+
+---
+
+## Multi-Agent Orchestration
+
+### Execution Model
+
+CodeWave uses a **round-robin discussion model** with shared context:
+
+#### State Representation
+
+```typescript
+interface ConversationState {
+  round: 1 | 2 | 3;
+  commit: CommitData;
+  agentResponses: Map<AgentName, AgentResponse[]>; // Round history
+  sharedContext: {
+    conversationHistory: ConversationTurn[];
+    previousConcerns: string[];
+    emergingConsensus: Partial<EvaluationMetrics>;
+  };
+}
+```
+
+#### Round Execution
+
+```typescript
+async function executeRound(
+  round: 1 | 2 | 3,
+  state: ConversationState,
+): Promise<ConversationState> {
+  const roundPromises = agents.map(agent => {
+    const prompt = buildPrompt(agent, round, state);
+    return agent.respond(prompt, state);
+  });
+
+  const responses = await Promise.all(roundPromises);
+
+  return {
+    ...state,
+    round: round + 1,
+    agentResponses: updateResponses(state.agentResponses, responses),
+  };
+}
+```
+
+### Agent Context Management
+
+Each agent receives context including:
+1. **Commit Data**: Files, changes, metadata
+2. **Previous Responses**: What other agents said
+3. **Conversation History**: Full transcript
+4. **Shared Metrics**: Emerging consensus
+5. **Agent Role**: Their specific responsibility
+
+---
+
+## LLM Integration
+
+### Multi-Provider Pattern
+
+```typescript
+interface LLMProvider {
+  name: string;
+  models: ModelConfig[];
+  generateMessage(prompt: string): Promise<string>;
+  countTokens(text: string): Promise<number>;
+}
+
+class LLMFactory {
+  static createProvider(config: LLMConfig): LLMProvider {
+    switch (config.provider) {
+      case 'anthropic':
+        return new AnthropicProvider(config);
+      case 'openai':
+        return new OpenAIProvider(config);
+      case 'google':
+        return new GoogleProvider(config);
+    }
+  }
+}
+```
+
+### Token Counting Strategy
+
+Different models have different token counting:
+- **Claude**: Uses js-tiktoken or Claude API token count
+- **GPT-4**: Uses js-tiktoken
+- **Gemini**: Uses Gemini API token count
+
+Each call is tracked:
+```typescript
+interface TokenTrack {
+  requestTokens: number;
+  responseTokens: number;
+  totalTokens: number;
+  model: string;
+  timestamp: Date;
+}
+```
+
+### Cost Estimation
+
+```typescript
+const costModel = {
+  'claude-3-5-sonnet-20241022': {
+    input: 0.003 / 1000,   // $0.003 per 1K tokens
+    output: 0.015 / 1000,  // $0.015 per 1K tokens
+  },
+  'gpt-4o': {
+    input: 0.015 / 1000,
+    output: 0.03 / 1000,
+  },
+  'gemini-2.0-flash': {
+    input: 0.075 / 1000,
+    output: 0.3 / 1000,
+  },
+};
+
+cost = (inputTokens * costModel.input) + (outputTokens * costModel.output);
+```
+
+---
+
+## RAG System
+
+### Activation Strategy
+
+```typescript
+if (diffSize > ragThreshold) {
+  // Use RAG for large diffs
+  initialize RagEvaluationWorkflow;
+} else {
+  // Use standard evaluation
+  initialize StandardEvaluationWorkflow;
+}
+```
+
+### RAG Process
+
+1. **Chunking**
+   - Split large diff into semantic chunks
+   - Default chunk size: 2000 characters
+   - Preserve file and hunk boundaries
+
+2. **Embedding**
+   - Generate vector embeddings using local model
+   - Store in memory vector store
+
+3. **Retrieval**
+   - Agents query most relevant chunks
+   - Retrieves top-k chunks per query
+   - Provides context window of relevant changes
+
+4. **Processing**
+   - Agents work with subset of diff
+   - Reduced token count
+   - Faster evaluation
+
+---
+
+## Output Generation
+
+### HTML Report Structure
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Bootstrap CSS -->
+  <!-- Custom styles -->
+</head>
+<body>
+  <header>
+    <!-- Commit metadata -->
+    <!-- Overall quality score -->
+  </header>
+
+  <main>
+    <!-- Metrics cards -->
+    <!-- Agent profiles -->
+    <!-- Round-by-round timeline -->
+    <!-- Concerns and recommendations -->
+  </main>
+
+  <aside>
+    <!-- Conversation transcript -->
+    <!-- Full metrics table -->
+  </aside>
+</body>
+</html>
+```
+
+### JSON Structure
+
+```typescript
+interface EvaluationResultJSON {
+  metadata: {
+    evaluationId: string;
+    timestamp: string;
+    version: string;
+  };
+  commit: CommitMetadata;
+  metrics: EvaluationMetrics;
+  rounds: EvaluationRound[];
+  consensus: ConsensusData;
+  conversation: ConversationTurn[];
+}
+```
+
+---
+
+## State Management
+
+### Orchestrator State Machine (LangGraph)
+
+```
+┌─────────────────┐
+│    START        │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  INITIALIZE_STATE                   │
+│  - Load commit data                 │
+│  - Setup RAG if needed              │
+│  - Initialize conversation history  │
+└────────┬────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  ROUND_1_INDEPENDENT_ASSESSMENT     │
+│  - Run all agents in parallel       │
+│  - Collect initial responses        │
+└────────┬────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  ROUND_2_CONCERNS                   │
+│  - Pass Round 1 to all agents       │
+│  - Collect concerns and updates     │
+└────────┬────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  ROUND_3_FINAL_VALIDATION           │
+│  - Pass all history to agents       │
+│  - Collect final positions          │
+└────────┬────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  CALCULATE_CONSENSUS                │
+│  - Weight all responses             │
+│  - Calculate final metrics          │
+│  - Extract themes and concerns      │
+└────────┬────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  GENERATE_OUTPUT                    │
+│  - Format all output types          │
+│  - Save to filesystem               │
+└────────┬────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│     COMPLETE    │
+└─────────────────┘
+```
+
+### Error Recovery
+
+```typescript
+try {
+  result = await evaluateCommit(commit);
+} catch (error) {
+  if (isRetryable(error)) {
+    if (retryCount < maxRetries) {
+      retryCount++;
+      await delay(exponentialBackoff(retryCount));
+      return evaluateCommit(commit); // Retry
+    }
+  }
+
+  if (skipErrors) {
+    return { error: error.message, commit };
+  } else {
+    throw error; // Halt execution
+  }
+}
+```
+
+---
+
+## Error Handling
+
+### Error Categories
+
+**Recoverable Errors** (retry or skip):
+- Network timeouts
+- Rate limiting (retry with backoff)
+- Temporary API failures
+
+**Non-Recoverable Errors** (halt or skip):
+- Invalid commit hash
+- Authentication failures
+- Corrupted diff data
+
+**Warnings** (continue with caution):
+- Large diffs requiring RAG
+- Unusual complexity patterns
+- High divergence between agents
+
+### Error Workflow
+
+```
+Error Occurs
+  │
+  ├─► Classify error type
+  │   ├─► Recoverable
+  │   ├─► Non-recoverable
+  │   └─► Warning
+  │
+  ├─► If Recoverable:
+  │   ├─► Retry with backoff
+  │   └─► Increment retry counter
+  │
+  ├─► If Non-Recoverable:
+  │   ├─► Log error
+  │   ├─► If batch: skip commit (if skipErrors=true)
+  │   └─► If single: throw error
+  │
+  ├─► If Warning:
+  │   ├─► Log warning
+  │   ├─► Continue evaluation
+  │   └─► Flag in results
+  │
+  ▼
+Continue Processing
+```
+
+---
+
+## Performance Considerations
+
+### Optimization Strategies
+
+1. **Parallel Agent Execution**
+   - Round 1: All agents assess simultaneously
+   - Reduces total evaluation time
+
+2. **Token Optimization**
+   - RAG reduces tokens for large commits
+   - Summarization of agent responses
+
+3. **Caching**
+   - Cache agent responses for identical commits
+   - Reuse embeddings for similar diffs
+
+4. **Batch Efficiency**
+   - Process multiple commits in parallel (default: 3)
+   - Configurable parallelization
+
+### Performance Metrics
+
+- **Single Commit**: 2-5 seconds average
+- **100 Commits**: 3-8 minutes (with parallelization)
+- **Token Usage**: 3,000-5,000 per commit
+- **Cost**: ~$0.015-0.030 per commit
+
+---
+
+For more information:
+- [README.md](../README.md) - Main documentation
+- [AGENTS.md](./AGENTS.md) - Agent specifications
+- [API.md](./API.md) - Programmatic API

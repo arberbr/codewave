@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CommitEvaluatorController } from '../src/modules/commit-evaluator/commit-evaluator.controller';
-import { CommitEvaluatorService } from '../src/modules/commit-evaluator/commit-evaluator.service';
-import { EvaluateCommitDto } from '../src/modules/commit-evaluator/dtos/evaluate-commit.dto';
+import { CommitEvaluatorController } from '../src/modules/codewave/codewave.controller';
+import { CommitEvaluatorService } from '../src/modules/codewave/codewave.service';
+import { EvaluateCommitDto } from '../src/modules/codewave/dtos/evaluate-commit.dto';
 
 describe('CommitEvaluatorController (e2e)', () => {
   let app: TestingModule;

@@ -11,7 +11,7 @@ import { loadConfig, configExists } from './config/config-loader';
 
 (async () => {
     if (!configExists()) {
-        console.error('❌ No configuration found! Run: commit-evaluator config --init');
+        console.error('❌ No configuration found! Run: codewave config --init');
         process.exit(1);
     }
 

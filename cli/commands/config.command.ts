@@ -3,7 +3,7 @@ import * as path from 'path';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 
-const CONFIG_FILE = '.commit-evaluator.config.json';
+const CONFIG_FILE = '.codewave.config.json';
 
 const DEFAULT_CONFIG = {
     apiKeys: {
@@ -31,7 +31,7 @@ const DEFAULT_CONFIG = {
     tracing: {
         enabled: false,
         apiKey: '',
-        project: 'commit-evaluator',
+        project: 'codewave',
         endpoint: 'https://api.smith.langchain.com',
     },
 };
@@ -235,7 +235,7 @@ async function initializeConfig(): Promise<void> {
                 type: 'input',
                 name: 'projectName',
                 message: 'Enter LangSmith project name:',
-                default: 'commit-evaluator',
+                default: 'codewave',
             },
         ]);
 
@@ -249,7 +249,7 @@ async function initializeConfig(): Promise<void> {
 
         console.log(chalk.green(`✅ LangSmith tracing enabled for project: ${config.tracing.project}`));
     } else {
-        console.log(chalk.gray('   Skipped - you can enable it later with: commit-evaluator config --set tracing.enabled=true'));
+        console.log(chalk.gray('   Skipped - you can enable it later with: codewave config --set tracing.enabled=true'));
     }
 
     // Save configuration
@@ -261,12 +261,12 @@ async function initializeConfig(): Promise<void> {
     let shouldAddGitignore = false;
     if (fs.existsSync(gitignorePath)) {
         const gitignoreContent = fs.readFileSync(gitignorePath, 'utf-8');
-        if (!gitignoreContent.includes('.commit-evaluator.config.json')) {
+        if (!gitignoreContent.includes('.codewave.config.json')) {
             const { addToGitignore } = await inquirer.prompt([
                 {
                     type: 'confirm',
                     name: 'addToGitignore',
-                    message: 'Add .commit-evaluator.config.json to .gitignore? (recommended - contains API keys)',
+                    message: 'Add .codewave.config.json to .gitignore? (recommended - contains API keys)',
                     default: true,
                 },
             ]);
@@ -277,9 +277,9 @@ async function initializeConfig(): Promise<void> {
     if (shouldAddGitignore) {
         fs.appendFileSync(
             gitignorePath,
-            '\n# Commit Evaluator configuration (contains API keys)\n.commit-evaluator.config.json\n',
+            '\n# CodeWave configuration (contains API keys)\n.codewave.config.json\n',
         );
-        console.log(chalk.green('✅ Added .commit-evaluator.config.json to .gitignore'));
+        console.log(chalk.green('✅ Added .codewave.config.json to .gitignore'));
     }
 
     console.log(chalk.cyan('\n🎉 Setup complete!'));
@@ -288,12 +288,12 @@ async function initializeConfig(): Promise<void> {
     console.log(chalk.gray(`  • LLM Provider: ${config.llm.provider} (${config.llm.model})`));
     console.log(chalk.gray(`  • Tracing: ${config.tracing.enabled ? 'Enabled' : 'Disabled'}`));
     console.log(chalk.cyan('\n💡 Tips:'));
-    console.log(chalk.gray('  • Change provider: commit-evaluator config --set llm.provider=openai'));
-    console.log(chalk.gray('  • Change model: commit-evaluator config --set llm.model=gpt-4o'));
-    console.log(chalk.gray('  • Update API key: commit-evaluator config --set apiKeys.anthropic=sk-ant-...'));
-    console.log(chalk.gray('  • View settings: commit-evaluator config --list'));
+    console.log(chalk.gray('  • Change provider: codewave config --set llm.provider=openai'));
+    console.log(chalk.gray('  • Change model: codewave config --set llm.model=gpt-4o'));
+    console.log(chalk.gray('  • Update API key: codewave config --set apiKeys.anthropic=sk-ant-...'));
+    console.log(chalk.gray('  • View settings: codewave config --list'));
     console.log(chalk.cyan('\nNext steps:'));
-    console.log(chalk.gray('  1. Run: commit-evaluator evaluate <diff-file>'));
+    console.log(chalk.gray('  1. Run: codewave evaluate <diff-file>'));
     console.log(chalk.gray('  2. View results in: results.json, report.html\n'));
 }
 
@@ -304,7 +304,7 @@ function listConfig(): void {
     const configPath = findConfigPath();
 
     if (!configPath) {
-        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: commit-evaluator config --init\n`));
+        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: codewave config --init\n`));
         process.exit(1);
     }
 
@@ -335,7 +335,7 @@ function getConfigValue(key: string): void {
     const configPath = findConfigPath();
 
     if (!configPath) {
-        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: commit-evaluator config --init\n`));
+        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: codewave config --init\n`));
         process.exit(1);
     }
 
@@ -362,7 +362,7 @@ function setConfigValue(keyValue: string): void {
     const configPath = findConfigPath();
 
     if (!configPath) {
-        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: commit-evaluator config --init\n`));
+        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: codewave config --init\n`));
         process.exit(1);
     }
 
@@ -410,7 +410,7 @@ function resetConfig(): void {
     const configPath = findConfigPath();
 
     if (!configPath) {
-        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: commit-evaluator config --init\n`));
+        console.log(chalk.red(`\n❌ ${CONFIG_FILE} not found. Run: codewave config --init\n`));
         process.exit(1);
     }
 
@@ -437,11 +437,11 @@ export async function runConfigCommand(args: string[]): Promise<void> {
             resetConfig();
         } else {
             console.log(chalk.cyan('\nUsage:'));
-            console.log(chalk.gray('  commit-evaluator config --init                    # Interactive setup'));
-            console.log(chalk.gray('  commit-evaluator config --list                    # Show all settings'));
-            console.log(chalk.gray('  commit-evaluator config --get llm.model           # Get specific value'));
-            console.log(chalk.gray('  commit-evaluator config --set llm.temperature=0.5 # Set value'));
-            console.log(chalk.gray('  commit-evaluator config --reset                   # Reset to defaults\n'));
+            console.log(chalk.gray('  codewave config --init                    # Interactive setup'));
+            console.log(chalk.gray('  codewave config --list                    # Show all settings'));
+            console.log(chalk.gray('  codewave config --get llm.model           # Get specific value'));
+            console.log(chalk.gray('  codewave config --set llm.temperature=0.5 # Set value'));
+            console.log(chalk.gray('  codewave config --reset                   # Reset to defaults\n'));
         }
     } catch (error) {
         console.log(chalk.red('\n❌ Error:'), error instanceof Error ? error.message : error);

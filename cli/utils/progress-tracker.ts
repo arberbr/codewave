@@ -1,9 +1,9 @@
 /**
  * ANSI Progress Tracker for Parallel Commit Evaluation
- * Uses cli-progress MultiBar for reliable cross-platform progress display
+ * Uses cli-progress MultiBar to display updating rows without duplication
  */
 
-import * as cliProgress from 'cli-progress';
+import { MultiBar, SingleBar, Presets } from 'cli-progress';
 
 interface CommitProgress {
     hash: string;
@@ -15,21 +15,23 @@ interface CommitProgress {
     currentStep: string;
     totalSteps?: number;
     currentStepIndex?: number;
-    row?: number; // Track which terminal row this commit is on
-    inputTokens?: number; // Track input tokens used
-    outputTokens?: number; // Track output tokens generated
-    totalCost?: number; // Track total cost in USD
-    progressBar?: cliProgress.SingleBar; // Individual progress bar
+    inputTokens?: number;
+    outputTokens?: number;
+    totalCost?: number;
+}
+
+interface BarPayload {
+    commit: string;
+    status: string;
 }
 
 export class ProgressTracker {
     private commits: Map<string, CommitProgress> = new Map();
     private isActive = false;
-    private displayOrder: string[] = []; // Maintain display order
-    private multiBar: cliProgress.MultiBar | null = null;
-    public originalConsoleLog?: (...args: any[]) => void; // Allow overriding console.log
-    private lastUpdateTime: Map<string, number> = new Map(); // Track last update time per commit
-    private UPDATE_THROTTLE_MS = 100; // Minimum ms between updates for same commit
+    private displayOrder: string[] = [];
+    private multiBar: MultiBar | null = null;
+    private bars: Map<string, SingleBar> = new Map();
+    public originalConsoleLog?: (...args: any[]) => void;
 
     // Totals across all commits
     private totalInputTokens = 0;
@@ -37,17 +39,7 @@ export class ProgressTracker {
     private totalCost = 0;
 
     constructor() {
-        // Create MultiBar container for multiple progress bars
-        this.multiBar = new cliProgress.MultiBar({
-            clearOnComplete: false,
-            hideCursor: true,
-            format: '{commit} | {author} | {tokens} | {cost} | {bar} {percentage}% | {status}',
-            barCompleteChar: '\u2588',
-            barIncompleteChar: '\u2591',
-            barsize: 20,
-            stopOnComplete: true,
-            forceRedraw: false, // Prevent excessive redraws
-        }, cliProgress.Presets.shades_classic);
+        // Initialize
     }
 
     /**
@@ -67,21 +59,26 @@ export class ProgressTracker {
     initialize(commitHashes: Array<{ hash: string; shortHash: string; author: string; date: string }>) {
         this.displayOrder = commitHashes.map((c) => c.hash);
 
+        // Print header
         this.log('\n\x1B[1m\x1B[36mParallel Commit Evaluation Progress:\x1B[0m');
-        this.log('─'.repeat(105));
-        this.log(`${'Commit'.padEnd(9)} | ${'Author'.padEnd(16)} | ${'Tokens (In/Out)'.padEnd(18)} | ${'Cost'.padEnd(10)} | ${'Progress'.padEnd(30)} | ${'Status'.padEnd(12)}`);
-        this.log('─'.repeat(105));
 
+        // Initialize multi-bar display
+        this.multiBar = new MultiBar(
+            {
+                clearOnComplete: false,
+                hideCursor: true,
+                format: '{commit} | {bar} {percentage}% | {status}',
+                barCompleteChar: '█',
+                barIncompleteChar: '░',
+                barsize: 25,
+                fps: 5,
+                stream: process.stderr,
+            },
+            Presets.shades_grey,
+        );
+
+        // Initialize all commits with pending status
         commitHashes.forEach((c) => {
-            // Create progress bar for this commit
-            const bar = this.multiBar!.create(100, 0, {
-                commit: c.shortHash.padEnd(9),
-                author: c.author.substring(0, 16).padEnd(16),
-                tokens: '0/0'.padEnd(18),
-                cost: '$0.0000'.padEnd(10),
-                status: 'Pending'.padEnd(12),
-            });
-
             this.commits.set(c.hash, {
                 hash: c.hash,
                 shortHash: c.shortHash,
@@ -90,12 +87,31 @@ export class ProgressTracker {
                 status: 'pending',
                 progress: 0,
                 currentStep: 'Waiting...',
-                progressBar: bar,
             });
+
+            // Create progress bar for this commit
+            const commitLabel = this.formatCommitLabel(c);
+            const bar = this.multiBar!.create(100, 0, {
+                commit: commitLabel,
+                status: 'Pending',
+            } as BarPayload);
+
+            this.bars.set(c.hash, bar);
         });
 
         this.isActive = true;
-    }    /**
+    }
+
+    /**
+     * Format commit label for display
+     */
+    private formatCommitLabel(commit: { shortHash: string; author: string }): string {
+        const shortHash = commit.shortHash.padEnd(9);
+        const author = commit.author.substring(0, 16).padEnd(16);
+        return `${shortHash} | ${author}`;
+    }
+
+    /**
      * Update progress for a specific commit
      */
     updateProgress(
@@ -112,17 +128,7 @@ export class ProgressTracker {
         },
     ) {
         const commit = this.commits.get(commitHash);
-        if (!commit) return;
-
-        // Throttle rapid updates (except for completion)
-        const now = Date.now();
-        const lastUpdate = this.lastUpdateTime.get(commitHash) || 0;
-        const isComplete = update.status === 'complete' || update.progress === 100;
-
-        if (!isComplete && now - lastUpdate < this.UPDATE_THROTTLE_MS) {
-            return; // Skip this update, too soon
-        }
-        this.lastUpdateTime.set(commitHash, now);
+        if (!commit || !this.bars.has(commitHash)) return;
 
         if (update.status !== undefined) commit.status = update.status;
         if (update.progress !== undefined) commit.progress = update.progress;
@@ -147,22 +153,16 @@ export class ProgressTracker {
             this.totalCost += delta;
         }
 
-        // Update the progress bar
-        if (commit.progressBar) {
-            const statusText = this.getStatusText(commit.status);
-            const inputTokens = (commit.inputTokens || 0).toLocaleString();
-            const outputTokens = (commit.outputTokens || 0).toLocaleString();
-            const tokensText = `${inputTokens}/${outputTokens}`.padEnd(18);
-            const costText = `$${(commit.totalCost || 0).toFixed(4)}`.padEnd(10);
+        // Update progress bar
+        const bar = this.bars.get(commitHash)!;
+        const statusText = this.getStatusText(commit.status);
+        const tokensInfo = `${(commit.inputTokens || 0).toLocaleString()}/${(commit.outputTokens || 0).toLocaleString()}`;
+        const costInfo = `$${(commit.totalCost || 0).toFixed(4)}`;
 
-            commit.progressBar.update(commit.progress, {
-                commit: commit.shortHash.padEnd(9),
-                author: commit.author.substring(0, 16).padEnd(16),
-                tokens: tokensText,
-                cost: costText,
-                status: statusText.padEnd(12),
-            });
-        }
+        bar.update(commit.progress, {
+            commit: this.formatCommitLabel({ shortHash: commit.shortHash, author: commit.author }),
+            status: `${tokensInfo} | ${costInfo} | ${statusText}`,
+        } as BarPayload);
     }
 
     /**
@@ -191,12 +191,12 @@ export class ProgressTracker {
     finalize() {
         this.isActive = false;
 
-        // Stop the multi-bar
         if (this.multiBar) {
             this.multiBar.stop();
         }
 
-        // Just add a newline for spacing - detailed results shown elsewhere
+        // Add spacing
+        this.log('');
         this.log('');
     }
 
