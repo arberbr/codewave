@@ -232,6 +232,8 @@ export function createCommitEvaluationGraph(
                 return { developerOverview: undefined };
             }
 
+            console.log('📝 Generating developer overview from commit diff...');
+
             const { DeveloperOverviewGenerator } = await import(
                 '../services/developer-overview-generator.js'
             );
@@ -275,6 +277,8 @@ export function createCommitEvaluationGraph(
                 }).totalCost;
             }
 
+            console.log(`✅ Developer overview generated successfully (${formattedOverview.length} chars)`);
+
             return {
                 developerOverview: formattedOverview,
                 totalInputTokens: devOverviewInputTokens,
@@ -282,7 +286,10 @@ export function createCommitEvaluationGraph(
                 totalCost: devOverviewCost,
             };
         } catch (error) {
-            console.warn(`Failed to generate developer overview: ${error instanceof Error ? error.message : String(error)}`);
+            console.warn(`⚠️  Failed to generate developer overview: ${error instanceof Error ? error.message : String(error)}`);
+            if (error instanceof Error && error.stack) {
+                console.warn(`   Stack: ${error.stack.split('\n').slice(0, 3).join(' -> ')}`);
+            }
             // Return undefined overview but continue execution
             return { developerOverview: undefined };
         }

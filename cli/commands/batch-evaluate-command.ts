@@ -251,7 +251,7 @@ export async function runBatchEvaluateCommand(args: string[]) {
                 const shortHash = commit.hash.substring(0, 8);
                 const commitOutputDir = await createEvaluationDirectory(shortHash);
 
-                // Prepare metadata with developer overview
+                // Prepare metadata
                 const metadata: EvaluationMetadata = {
                     timestamp: new Date().toISOString(),
                     commitHash: commit.hash,
@@ -259,7 +259,6 @@ export async function runBatchEvaluateCommand(args: string[]) {
                     commitMessage: commit.message,
                     commitDate: commit.date,
                     source: 'batch',
-                    developerOverview: evaluationResult.developerOverview, // Include developer overview
                 };
 
                 // Save all reports using shared utility
@@ -268,6 +267,7 @@ export async function runBatchEvaluateCommand(args: string[]) {
                     outputDir: commitOutputDir,
                     metadata,
                     diff,
+                    developerOverview: evaluationResult.developerOverview, // Pass developer overview directly
                 });
 
                 // Calculate aggregate metrics
