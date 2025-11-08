@@ -343,16 +343,17 @@ function buildMetricsTable(groupedResults: Map<string, AgentEvaluation[]>): stri
       const isPrimary = weight >= 0.40; // Primary expertise threshold
       const badgeClass = isPrimary ? 'badge bg-warning text-dark' : 'badge bg-secondary';
 
-      if (value !== undefined && typeof value === 'number') {
+      // Ensure value is a valid number
+      if (value !== undefined && typeof value === 'number' && isFinite(value)) {
         return `<td class="text-center">
-                          <div>${value.toFixed(2)}</div>
+                          <div>${(Number(value) || 0).toFixed(2)}</div>
                           <small class="${badgeClass}">${weightPercent}%</small>
                         </td>`;
       }
       return `<td class="text-center text-muted">-</td>`;
     }).join('')}
                   <td class="text-center bg-success bg-opacity-10">
-                    ${final && typeof final.value === 'number' ? `<strong>${final.value.toFixed(2)}</strong><br><small class="text-muted">(weighted avg from ${final.contributors.length} agent${final.contributors.length > 1 ? 's' : ''})</small>` : '<strong>-</strong><br><small class="text-muted">(no data)</small>'}
+                    ${final && typeof final.value === 'number' && isFinite(final.value) ? `<strong>${(Number(final.value) || 0).toFixed(2)}</strong><br><small class="text-muted">(weighted avg from ${final.contributors.length} agent${final.contributors.length > 1 ? 's' : ''})</small>` : '<strong>-</strong><br><small class="text-muted">(no data)</small>'}
                 </tr>
                 `;
   }).join('')}

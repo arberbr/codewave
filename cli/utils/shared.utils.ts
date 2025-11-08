@@ -30,15 +30,51 @@ export function generateTimestamp(): string {
 }
 
 /**
- * Create and register all agents
+ * Create and register agents based on config.agents.enabled list
+ * Agent IDs: 'business-analyst', 'sdet', 'developer-author', 'senior-architect', 'developer-reviewer'
  */
 export function createAgentRegistry(config: AppConfig): AgentRegistry {
     const agentRegistry = new AgentRegistry();
-    agentRegistry.register(new BusinessAnalystAgent(config));
-    agentRegistry.register(new SDETAgent(config));
-    agentRegistry.register(new DeveloperAuthorAgent(config));
-    agentRegistry.register(new SeniorArchitectAgent(config));
-    agentRegistry.register(new DeveloperReviewerAgent(config));
+    const enabledAgents = config.agents.enabled || [
+        'business-analyst',
+        'sdet',
+        'developer-author',
+        'senior-architect',
+        'developer-reviewer',
+    ];
+
+    // Validate that at least one agent is enabled
+    if (!enabledAgents || enabledAgents.length === 0) {
+        console.warn(
+            '⚠️  No agents enabled in config. Enabling all agents by default.'
+        );
+        enabledAgents.push(
+            'business-analyst',
+            'sdet',
+            'developer-author',
+            'senior-architect',
+            'developer-reviewer'
+        );
+    }
+
+    // Register agents based on enabled list
+    const agentMap: Record<string, () => any> = {
+        'business-analyst': () => new BusinessAnalystAgent(config),
+        sdet: () => new SDETAgent(config),
+        'developer-author': () => new DeveloperAuthorAgent(config),
+        'senior-architect': () => new SeniorArchitectAgent(config),
+        'developer-reviewer': () => new DeveloperReviewerAgent(config),
+    };
+
+    for (const agentId of enabledAgents) {
+        const agentFactory = agentMap[agentId];
+        if (agentFactory) {
+            agentRegistry.register(agentFactory());
+        } else {
+            console.warn(`⚠️  Unknown agent: ${agentId}. Skipping.`);
+        }
+    }
+
     return agentRegistry;
 }
 
@@ -514,8 +550,8 @@ export async function updateEvaluationIndex(
         index.push(entry);
     }
 
-    // Sort by last evaluated (most recent first)
-    index.sort((a, b) => new Date(b.lastEvaluated).getTime() - new Date(a.lastEvaluated).getTime());
+    // Sort by commit date (newest first), then by last evaluated as tiebreaker
+    index.sort((a, b) => new Date(b.commitDate).getTime() - new Date(a.commitDate).getTime() || new Date(b.lastEvaluated).getTime() - new Date(a.lastEvaluated).getTime());
 
     // Write JSON index
     await fs.writeFile(indexJsonPath, JSON.stringify(index, null, 2));
@@ -733,17 +769,8 @@ async function generateIndexHtml(indexPath: string, index: any[]): Promise<void>
 
         <div class="search-filter-bar">
             <div class="row">
-                <div class="col-md-6 mb-3 mb-md-0">
+                <div class="col-md-12">
                     <input type="text" class="form-control" id="searchInput" placeholder="🔍 Search by hash, author, or message...">
-                </div>
-                <div class="col-md-6">
-                    <div class="filter-buttons">
-                        <button class="btn btn-sm btn-outline-primary active" onclick="filterBySource('all')">All</button>
-                        <button class="btn btn-sm btn-outline-primary" onclick="filterBySource('commit')">Commit</button>
-                        <button class="btn btn-sm btn-outline-primary" onclick="filterBySource('staged')">Staged</button>
-                        <button class="btn btn-sm btn-outline-primary" onclick="filterBySource('current')">Current</button>
-                        <button class="btn btn-sm btn-outline-primary" onclick="filterBySource('file')">File</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -768,6 +795,8 @@ async function generateIndexHtml(indexPath: string, index: any[]): Promise<void>
 ${Array.from(byAuthor.entries())
             .sort((a, b) => b[1].length - a[1].length)
             .map(([author, commits]) => {
+                // Sort commits by commit date (newest first)
+                commits.sort((a, b) => new Date(b.commitDate).getTime() - new Date(a.commitDate).getTime());
                 const authorMetrics = {
                     quality: 0,
                     complexity: 0,
@@ -826,6 +855,7 @@ ${Array.from(byAuthor.entries())
                             <th>Author</th>
                             <th>Message</th>
                             <th>Date</th>
+                            <th>Last Evaluated</th>
                             <th style="text-align: center;">Source</th>
                             <th style="text-align: center;">Quality</th>
                             <th style="text-align: center;">Complexity</th>
@@ -854,6 +884,7 @@ ${index.map(item => {
                             <td>👤 ${item.commitAuthor || 'Unknown'}</td>
                             <td style="max-width: 300px;">${item.commitMessage ? item.commitMessage.split('\\n')[0] : ''}</td>
                             <td style="white-space: nowrap;">${item.commitDate ? new Date(item.commitDate).toLocaleDateString() : ''}</td>
+                            <td style="white-space: nowrap;">${item.lastEvaluated ? new Date(item.lastEvaluated).toLocaleDateString() : ''}</td>
                             <td class="metric-cell">
                                 <span class="badge badge-secondary">${item.source || 'unknown'}</span>
                             </td>
@@ -892,32 +923,11 @@ ${index.map(item => {
             });
         });
 
-        // Filter by source
-        let currentFilter = 'all';
-        function filterBySource(source) {
-            currentFilter = source;
-            const rows = document.querySelectorAll('#commitList tr');
-            
-            rows.forEach(row => {
-                if (source === 'all' || row.dataset.source === source) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            // Update button states
-            document.querySelectorAll('.filter-buttons button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-        }
-
         // Filter by author
         function filterByAuthor(author) {
             // Clear search box
             document.getElementById('searchInput').value = '';
-            
+
             const rows = document.querySelectorAll('#commitList tr');
             rows.forEach(row => {
                 if (row.dataset.author === author) {
@@ -926,15 +936,6 @@ ${index.map(item => {
                     row.style.display = 'none';
                 }
             });
-
-            // Reset source filter to 'all'
-            document.querySelectorAll('.filter-buttons button').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.textContent === 'All') {
-                    btn.classList.add('active');
-                }
-            });
-            currentFilter = 'all';
 
             // Scroll to commits table
             document.getElementById('commitsTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1000,6 +1001,9 @@ async function generateAuthorPage(
         techDebt: 0,
         count: 0,
     };
+
+    // Sort commits by commit date (newest first)
+    commits.sort((a, b) => new Date(b.commitDate).getTime() - new Date(a.commitDate).getTime());
 
     commits.forEach(c => {
         if (c.metrics) {
@@ -1114,6 +1118,7 @@ async function generateAuthorPage(
                             <th>Hash</th>
                             <th>Message</th>
                             <th>Date</th>
+                            <th>Last Evaluated</th>
                             <th style="text-align: center;">Source</th>
                             <th style="text-align: center;">Quality</th>
                             <th style="text-align: center;">Complexity</th>
@@ -1141,6 +1146,7 @@ ${commits.map(item => {
                             </td>
                             <td style="max-width: 400px;">${item.commitMessage ? item.commitMessage.split('\\n')[0] : ''}</td>
                             <td style="white-space: nowrap;">${item.commitDate ? new Date(item.commitDate).toLocaleDateString() : ''}</td>
+                            <td style="white-space: nowrap;">${item.lastEvaluated ? new Date(item.lastEvaluated).toLocaleDateString() : ''}</td>
                             <td class="metric-cell">
                                 <span class="badge badge-secondary">${item.source || 'unknown'}</span>
                             </td>
@@ -1181,20 +1187,36 @@ export function buildIndexUrl(): string {
  * Print completion message for evaluate command (single commit)
  */
 export function printEvaluateCompletionMessage(outputDir: string): void {
-    const chalk = require('chalk').default;
+    try {
+        const chalk = require('chalk').default;
 
-    console.log(chalk.green(`\n✅ Evaluation complete!`));
-    console.log(chalk.cyan(`📁 Output directory: ${chalk.bold(outputDir)}`));
-    console.log(chalk.white(`   📄 report-enhanced.html  - 🌟 Conversation Timeline (Interactive)`));
-    console.log(chalk.white(`   📝 conversation.md       - 🌟 Markdown Transcript`));
-    console.log(chalk.gray(`   📄 report.html           - Standard HTML report`));
-    console.log(chalk.gray(`   📋 results.json          - Full JSON results`));
-    console.log(chalk.gray(`   📝 commit.diff           - Original diff`));
-    console.log(chalk.gray(`   📊 summary.txt           - Quick summary`));
-    console.log(chalk.yellow(`\n💡 Open ${chalk.bold('report-enhanced.html')} for interactive view or ${chalk.bold('conversation.md')} for transcript!\n`));
+        console.log(chalk.green(`\n✅ Evaluation complete!`));
+        console.log(chalk.cyan(`📁 Output directory: ${chalk.bold(outputDir)}`));
+        console.log(chalk.white(`   📄 report-enhanced.html  - 🌟 Conversation Timeline (Interactive)`));
+        console.log(chalk.white(`   📝 conversation.md       - 🌟 Markdown Transcript`));
+        console.log(chalk.gray(`   📄 report.html           - Standard HTML report`));
+        console.log(chalk.gray(`   📋 results.json          - Full JSON results`));
+        console.log(chalk.gray(`   📝 commit.diff           - Original diff`));
+        console.log(chalk.gray(`   📊 summary.txt           - Quick summary`));
+        console.log(chalk.yellow(`\n💡 Open ${chalk.bold('report-enhanced.html')} for interactive view or ${chalk.bold('conversation.md')} for transcript!\n`));
 
-    const indexUrl = buildIndexUrl();
-    console.log(chalk.cyan(`\n🌐 View all evaluations: ${indexUrl}\n`));
+        const indexUrl = buildIndexUrl();
+        console.log(chalk.cyan(`\n🌐 View all evaluations: ${indexUrl}\n`));
+    } catch (e) {
+        // Fallback without chalk if it's not available
+        console.log(`\n✅ Evaluation complete!`);
+        console.log(`📁 Output directory: ${outputDir}`);
+        console.log(`   📄 report-enhanced.html  - 🌟 Conversation Timeline (Interactive)`);
+        console.log(`   📝 conversation.md       - 🌟 Markdown Transcript`);
+        console.log(`   📄 report.html           - Standard HTML report`);
+        console.log(`   📋 results.json          - Full JSON results`);
+        console.log(`   📝 commit.diff           - Original diff`);
+        console.log(`   📊 summary.txt           - Quick summary`);
+        console.log(`\n💡 Open report-enhanced.html for interactive view or conversation.md for transcript!\n`);
+
+        const indexUrl = buildIndexUrl();
+        console.log(`\n🌐 View all evaluations: ${indexUrl}\n`);
+    }
 }
 
 /**

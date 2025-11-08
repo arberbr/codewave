@@ -46,10 +46,9 @@ export async function runBatchEvaluateCommand(args: string[]) {
     // Parse arguments
     const options = parseArguments(args);
 
+    // Default to current directory if --repo not provided
     if (!options.repository) {
-        console.error('❌ Error: --repo <path> is required');
-        printBatchUsage();
-        process.exit(1);
+        options.repository = '.';
     }
 
     // Load configuration
@@ -180,7 +179,7 @@ export async function runBatchEvaluateCommand(args: string[]) {
                         totalCommits: commits.length,
                     },
                     {
-                        streaming: true, // Enable streaming to get token/cost updates
+                        streaming: options.streaming, // Use parsed streaming option (default true, disable with --no-stream)
                         onProgress: (state: any) => {
                             // Track vector store indexing progress
                             if (state.type === 'vectorizing') {
@@ -330,6 +329,9 @@ export async function runBatchEvaluateCommand(args: string[]) {
 
     // Print final summary using shared output function
     printBatchCompletionMessage(summary);
+
+    // Exit the process
+    process.exit(0);
 }
 
 function parseArguments(args: string[]): any {
@@ -340,6 +342,7 @@ function parseArguments(args: string[]): any {
         count: null,
         branch: 'HEAD',
         depth: 'normal', // Default depth mode
+        streaming: true, // Streaming enabled by default
     };
 
     for (let i = 0; i < args.length; i++) {
@@ -371,6 +374,9 @@ function parseArguments(args: string[]): any {
                 } else {
                     console.warn(`⚠️  Invalid depth mode: ${depthValue}. Use 'fast', 'normal', or 'deep'. Defaulting to 'normal'.`);
                 }
+                break;
+            case '--no-stream':
+                options.streaming = false;
                 break;
             default:
                 console.warn(`⚠️  Unknown option: ${arg}`);
@@ -731,16 +737,18 @@ function validateConfig(config: AppConfig) {
 }
 
 function printBatchUsage() {
-    console.log('Usage: codewave batch --repo <path> [options]');
+    console.log('Usage: codewave batch [options]');
     console.log('\nOptions:');
-    console.log('  --repo, -r <path>      Path to git repository (required)');
+    console.log('  --repo, -r <path>      Path to git repository (default: current directory)');
     console.log('  --since <date>         Evaluate commits since this date (e.g., "2025-01-01")');
     console.log('  --until <date>         Evaluate commits until this date');
     console.log('  --count, -n <number>   Evaluate last N commits');
     console.log('  --branch, -b <name>    Branch to evaluate (default: HEAD)');
+    console.log('  --no-stream            Disable streaming output (silent mode)');
     console.log('\nExamples:');
-    console.log('  codewave batch --repo /path/to/repo --count 10');
-    console.log('  codewave batch --repo /path/to/repo --since "2025-01-01"');
-    console.log('  codewave batch --repo /path/to/repo --since "2025-01-01" --until "2025-01-31"');
+    console.log('  codewave batch --count 10                          # Last 10 commits in current repo');
+    console.log('  codewave batch --repo /path/to/repo --count 10     # Last 10 commits in specific repo');
+    console.log('  codewave batch --since "2025-01-01"                # All commits since date');
+    console.log('  codewave batch --since "2025-01-01" --until "2025-01-31"  # Date range');
 }
 

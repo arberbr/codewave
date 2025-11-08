@@ -14,19 +14,24 @@ const DEFAULT_CONFIG = {
     },
     llm: {
         provider: 'anthropic',
-        model: 'claude-haiku-4-5-20251001', // Cost-optimized for multi-agent discussion,
+        model: 'claude-haiku-4-5-20251001', // Cost-optimized for multi-agent discussion (6x cheaper than Sonnet)
         temperature: 0.2,
-        maxTokens: 4096,
+        maxTokens: 16000, // Increased to 16000 for all models - prevents truncation and JSON parsing errors
     },
     agents: {
-        enabled: ['senior-reviewer', 'developer', 'qa-engineer', 'metrics'],
-        retries: 2, // Discussion rounds
-        timeout: 300000,
+        // Enabled agents: business-analyst, sdet, developer-author, senior-architect, developer-reviewer
+        // Remove agents from this list to disable them (e.g., for faster evaluation)
+        enabled: ['business-analyst', 'sdet', 'developer-author', 'senior-architect', 'developer-reviewer'],
+        retries: 3, // Max discussion rounds (for backwards compatibility, overridden by maxRounds if set)
+        timeout: 300000, // 5 minutes per agent
+        minRounds: 2, // Minimum 2 rounds before allowing early convergence stop
+        maxRounds: 3, // Maximum 3 rounds: Initial → Concerns → Validation
+        clarityThreshold: 0.85, // Stop early if 85% similarity between rounds (only after minRounds)
     },
     output: {
         directory: '.',
         format: 'json',
-        generateHtml: true,
+        generateHtml: true, // Also generate report.html and index.html
     },
     tracing: {
         enabled: false,
@@ -58,7 +63,8 @@ async function initializeConfig(): Promise<void> {
     const configPath = path.join(process.cwd(), CONFIG_FILE);
     console.log(chalk.gray(`Creating configuration in: ${CONFIG_FILE}\n`));
 
-    // Check if config already exists
+    // Check if config already exists and preserve existing values
+    let existingConfig: any = null;
     if (fs.existsSync(configPath)) {
         const { shouldOverwrite } = await inquirer.prompt([
             {
@@ -73,14 +79,42 @@ async function initializeConfig(): Promise<void> {
             console.log(chalk.yellow('Setup cancelled.'));
             return;
         }
+
+        // Read and preserve existing configuration
+        try {
+            existingConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+            console.log(chalk.gray('ℹ️  Loading existing configuration as defaults...\n'));
+        } catch (error) {
+            console.log(chalk.yellow('⚠️  Could not read existing config, starting with defaults.\n'));
+        }
     }
 
-    // Start with default config
+    // Start with default config and merge with existing values
     const config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    if (existingConfig) {
+        // Merge existing values to use as defaults
+        if (existingConfig.apiKeys) {
+            config.apiKeys = { ...config.apiKeys, ...existingConfig.apiKeys };
+        }
+        if (existingConfig.llm) {
+            config.llm = { ...config.llm, ...existingConfig.llm };
+        }
+        if (existingConfig.agents) {
+            config.agents = { ...config.agents, ...existingConfig.agents };
+        }
+        if (existingConfig.output) {
+            config.output = { ...config.output, ...existingConfig.output };
+        }
+        if (existingConfig.tracing) {
+            config.tracing = { ...config.tracing, ...existingConfig.tracing };
+        }
+    }
 
     // Interactive API key setup - MANDATORY
     console.log(chalk.cyan('📋 LLM Provider Selection (REQUIRED)\n'));
 
+    // Use existing provider as default, or first choice if none exists
+    const defaultProvider = config.llm.provider || 'anthropic';
     const { provider } = await inquirer.prompt([
         {
             type: 'list',
@@ -108,6 +142,7 @@ async function initializeConfig(): Promise<void> {
                     short: 'xAI',
                 },
             ],
+            default: defaultProvider,
         },
     ]);
 
@@ -172,13 +207,19 @@ async function initializeConfig(): Promise<void> {
     console.log(chalk.gray('💡 CodeWave uses multi-agent discussion (3 rounds) to refine evaluations.'));
     console.log(chalk.gray('   Cheaper models like Haiku achieve 95%+ quality through discussion refinement.\n'));
 
+    // Use existing model as default if it's valid for this provider, otherwise use provider default
+    let defaultModel = info.defaultModel;
+    if (config.llm.model && info.models.some(m => m.value === config.llm.model)) {
+        defaultModel = config.llm.model;
+    }
+
     const { selectedModel } = await inquirer.prompt([
         {
             type: 'list',
             name: 'selectedModel',
             message: `Choose ${provider} model:`,
             choices: info.models,
-            default: info.defaultModel,
+            default: defaultModel,
         },
     ]);
 
@@ -219,13 +260,22 @@ async function initializeConfig(): Promise<void> {
     // Prompt for API key with validation
     console.log(chalk.gray(`\nGet your API key at: ${info.url}\n`));
 
+    const existingApiKey = config.apiKeys[provider];
+    const apiKeyPromptMessage = existingApiKey
+        ? `Enter ${provider} API key (${info.keyFormat}) [press Enter to keep existing]:`
+        : `Enter ${provider} API key (${info.keyFormat}):`;
+
     const { apiKey } = await inquirer.prompt([
         {
             type: 'password',
             name: 'apiKey',
-            message: `Enter ${provider} API key (${info.keyFormat}):`,
+            message: apiKeyPromptMessage,
             validate: (input: string) => {
+                // If user pressed Enter and there's an existing key, that's valid
                 if (!input || input.trim().length === 0) {
+                    if (existingApiKey) {
+                        return true;
+                    }
                     return 'API key is required';
                 }
                 return true;
@@ -234,8 +284,10 @@ async function initializeConfig(): Promise<void> {
         },
     ]);
 
-    // Configure provider
-    config.apiKeys[provider] = apiKey.trim();
+    // Configure provider - use new key if provided, otherwise keep existing
+    if (apiKey && apiKey.trim().length > 0) {
+        config.apiKeys[provider] = apiKey.trim();
+    }
     config.llm.provider = provider;
     config.llm.model = selectedModel;
 
@@ -244,12 +296,13 @@ async function initializeConfig(): Promise<void> {
     // LangSmith tracing setup (optional)
     console.log(chalk.cyan('\n\n🔍 LangSmith Tracing Configuration (OPTIONAL)\n'));
 
+    const defaultTracingEnabled = config.tracing.enabled || false;
     const { enableTracing } = await inquirer.prompt([
         {
             type: 'confirm',
             name: 'enableTracing',
             message: 'Enable LangSmith tracing for debugging?',
-            default: false,
+            default: defaultTracingEnabled,
         },
     ]);
 
@@ -258,14 +311,14 @@ async function initializeConfig(): Promise<void> {
             {
                 type: 'password',
                 name: 'langchainKey',
-                message: 'Enter LangSmith API key (lsv2_pt_...):',
+                message: 'Enter LangSmith API key (lsv2_pt_...) [press Enter to keep existing]:',
                 mask: '*',
             },
             {
                 type: 'input',
                 name: 'projectName',
                 message: 'Enter LangSmith project name:',
-                default: 'codewave',
+                default: config.tracing.project || 'codewave',
             },
         ]);
 

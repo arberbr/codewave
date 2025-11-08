@@ -207,7 +207,7 @@ export async function runEvaluateCommand(args: string[]) {
         console.log('  codewave evaluate --current               # Evaluate all current changes');
         console.log('\nOptions:');
         console.log('  --repo <path>   Repository path (default: current directory)');
-        console.log('  --stream        Enable streaming output');
+        console.log('  --no-stream     Disable streaming output (silent mode)');
         process.exit(1);
     }
 
@@ -260,8 +260,8 @@ export async function runEvaluateCommand(args: string[]) {
         config,
     };
 
-    // Check for --stream flag
-    const streamingEnabled = args.includes('--stream');
+    // Check for --no-stream flag (streaming enabled by default)
+    const streamingEnabled = !args.includes('--no-stream');
 
     const evaluationResult = await orchestrator.evaluateCommit(context, {
         streaming: streamingEnabled,

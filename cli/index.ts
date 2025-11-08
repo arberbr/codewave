@@ -67,7 +67,7 @@ function printUsage() {
     console.log('  --staged                Evaluate staged changes (git diff --cached)');
     console.log('  --current               Evaluate all current changes (staged + unstaged)');
     console.log('  --repo <path>           Repository path (default: current directory)');
-    console.log('  --stream                Enable streaming output');
+    console.log('  --no-stream             Disable streaming output (silent mode)');
     console.log('');
     console.log('Batch Options:');
     console.log('  --repo <path>           Repository path (default: current directory)');
@@ -75,6 +75,7 @@ function printUsage() {
     console.log('  --until <date>          Only commits before this date');
     console.log('  --count <number>        Number of recent commits to evaluate');
     console.log('  --branch <name>         Git branch to analyze (default: current branch)');
+    console.log('  --no-stream             Disable streaming output (silent mode)');
     console.log('');
     console.log('Examples:');
     console.log('  # Setup configuration');

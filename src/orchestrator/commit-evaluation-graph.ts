@@ -334,25 +334,35 @@ export function createCommitEvaluationGraph(
 
                 try {
                     // Pass previous agent results for conversation context
-                    const result = await agent.execute({
-                        commitDiff: state.commitDiff,
-                        filesChanged: state.filesChanged,
-                        developerOverview: state.developerOverview, // Developer's description of changes for context
-                        agentResults: state.agentResults, // Agents can reference each other's responses
-                        conversationHistory: state.conversationHistory, // Pass full conversation
-                        vectorStore: state.vectorStore, // RAG support for large diffs
-                        roundPurpose, // Tell agent what phase we're in (initial/concerns/validation)
+                    const agentTimeout = config.agents.timeout || 300000; // Default: 5 minutes
 
-                        // Pass depth configuration for agent self-iteration
-                        depthMode: config.agents.depthMode || 'normal',
-                        maxInternalIterations: config.agents.maxInternalIterations,
-                        internalClarityThreshold: config.agents.internalClarityThreshold,
+                    const result = await Promise.race([
+                        agent.execute({
+                            commitDiff: state.commitDiff,
+                            filesChanged: state.filesChanged,
+                            developerOverview: state.developerOverview, // Developer's description of changes for context
+                            agentResults: state.agentResults, // Agents can reference each other's responses
+                            conversationHistory: state.conversationHistory, // Pass full conversation
+                            vectorStore: state.vectorStore, // RAG support for large diffs
+                            roundPurpose, // Tell agent what phase we're in (initial/concerns/validation)
 
-                        // Batch evaluation metadata
-                        commitHash: state.commitHash,
-                        commitIndex: state.commitIndex,
-                        totalCommits: state.totalCommits,
-                    });
+                            // Pass depth configuration for agent self-iteration
+                            depthMode: config.agents.depthMode || 'normal',
+                            maxInternalIterations: config.agents.maxInternalIterations,
+                            internalClarityThreshold: config.agents.internalClarityThreshold,
+
+                            // Batch evaluation metadata
+                            commitHash: state.commitHash,
+                            commitIndex: state.commitIndex,
+                            totalCommits: state.totalCommits,
+                        }),
+                        new Promise((_, reject) =>
+                            setTimeout(() => {
+                                const timeoutSeconds = Math.round(agentTimeout / 1000);
+                                reject(new Error(`Agent timeout after ${timeoutSeconds}s`));
+                            }, agentTimeout)
+                        ),
+                    ]) as AgentResult;
 
                     // Update progress inline with \r (same line)
                     completedCount++;

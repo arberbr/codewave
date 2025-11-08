@@ -17,7 +17,9 @@ export const DEFAULT_CONFIG: AppConfig = {
         maxTokens: 16000, // Increased to 16000 for all models - prevents truncation and JSON parsing errors
     },
     agents: {
-        enabled: ['senior-reviewer', 'developer', 'qa-engineer', 'metrics'],
+        // Enabled agents: business-analyst, sdet, developer-author, senior-architect, developer-reviewer
+        // Remove agents from this list to disable them (e.g., for faster evaluation)
+        enabled: ['business-analyst', 'sdet', 'developer-author', 'senior-architect', 'developer-reviewer'],
         retries: 3, // Max discussion rounds (for backwards compatibility, overridden by maxRounds if set)
         timeout: 300000, // 5 minutes per agent
         minRounds: 2, // Minimum 2 rounds before allowing early convergence stop
