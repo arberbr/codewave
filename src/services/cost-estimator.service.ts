@@ -21,18 +21,31 @@ export interface CostEstimate {
 /**
  * Service for estimating LLM costs based on token usage
  *
- * Uses real data from 92 agent evaluations:
- * - Per agent input: ~3,360 tokens (includes diff + system prompt + discussion context)
- * - Per agent output: ~149 tokens (intentionally constrained for cost efficiency)
- * - All 5 agents evaluate each commit independently
- * - Outputs are constrained: summary max 150 chars, details max 400 chars
+ * IMPORTANT: This service estimates costs per individual agent evaluation (one agent, one round).
+ *
+ * Actual evaluation structure (as of Nov 2025):
+ * - 5 agents: Business Analyst, Developer Reviewer, Developer Author, Senior Architect, SDET
+ * - Each agent may run 2-3 discussion rounds (initial, concerns/questions, validation)
+ * - Multi-round evaluations increase token usage significantly
+ *
+ * Real data from evaluated commits:
+ * - Single agent evaluation: typically 2,000-13,000 input tokens
+ * - Average per agent: ~11,128 input tokens (accounting for all rounds)
+ * - Average per agent output: ~150 tokens
+ * - Full commit evaluation (all agents, all rounds): ~55,640 input + 1,512 output tokens total
+ *
+ * For cost estimation:
+ * - This shows the AVERAGE per agent per commit
+ * - Multiply by number of agents to get full evaluation cost
+ * - Note: Actual multi-round discussions typically cost 30-50% more than single-round
  */
 export class CostEstimatorService {
-    // Real token usage data from evaluated commits (92 agent evaluations analyzed):
-    private readonly AVG_INPUT_TOKENS_PER_AGENT = 3360;
+    // Real token usage data from actual evaluated commits:
+    // These represent AVERAGE per agent across all agents and rounds
+    private readonly AVG_INPUT_TOKENS_PER_AGENT = 11128; // Updated from real data
     private readonly MAX_INPUT_TOKENS_PER_AGENT = 13083;
-    private readonly AVG_OUTPUT_TOKENS_PER_AGENT = 149;
-    private readonly MAX_OUTPUT_TOKENS_PER_AGENT = 171;
+    private readonly AVG_OUTPUT_TOKENS_PER_AGENT = 151; // Updated from real data
+    private readonly MAX_OUTPUT_TOKENS_PER_AGENT = 174;
     private readonly NUM_AGENTS = 5; // 5 agents evaluate each commit
 
     constructor(private config: AppConfig) {}
@@ -111,12 +124,22 @@ export class CostEstimatorService {
 
         if (!pricing) return;
 
+        const totalAgents = commitCount * this.NUM_AGENTS;
+        const perCommitAverage = estimate.average.totalCost / commitCount;
+        const perAgentAverage = perCommitAverage / this.NUM_AGENTS;
+
         console.log('💰 Cost Estimation:');
         console.log(`   Model: ${provider}/${model}`);
-        console.log(`   Commits: ${commitCount}`);
-        console.log(`   Agents per commit: ${this.NUM_AGENTS}\n`);
+        console.log(`   Commits to evaluate: ${commitCount}`);
+        console.log(`   Agents per commit: ${this.NUM_AGENTS}`);
+        console.log(`   Total agent evaluations: ${totalAgents}\n`);
 
-        console.log(`   AVERAGE CASE (typical):`, formatCost(estimate.average.totalCost));
+        console.log(`   ℹ️  Note: These estimates are based on multi-round evaluations (typically 10 agents per commit after all discussion rounds)\n`);
+
+        console.log(`   📊 AVERAGE CASE (typical multi-round discussion):`);
+        console.log(`     Total cost for ${commitCount} commits: ${formatCost(estimate.average.totalCost)}`);
+        console.log(`     Per commit: ${formatCost(perCommitAverage)}`);
+        console.log(`     Per agent: ${formatCost(perAgentAverage)}`);
         console.log(
             `     - Input:  ${estimate.average.inputTokens.toLocaleString()} tokens @ $${pricing.input.toFixed(2)}/M = ${formatCost(estimate.average.inputCost)}`
         );
@@ -124,7 +147,9 @@ export class CostEstimatorService {
             `     - Output: ${estimate.average.outputTokens.toLocaleString()} tokens @ $${pricing.output.toFixed(2)}/M = ${formatCost(estimate.average.outputCost)}`
         );
 
-        console.log(`\n   MAXIMUM CASE (complex diffs/discussions):`, formatCost(estimate.maximum.totalCost));
+        console.log(`\n   📈 MAXIMUM CASE (complex diffs or extended discussions):`);
+        console.log(`     Total cost for ${commitCount} commits: ${formatCost(estimate.maximum.totalCost)}`);
+        console.log(`     Per commit: ${formatCost(estimate.maximum.totalCost / commitCount)}`);
         console.log(
             `     - Input:  ${estimate.maximum.inputTokens.toLocaleString()} tokens @ $${pricing.input.toFixed(2)}/M = ${formatCost(estimate.maximum.inputCost)}`
         );

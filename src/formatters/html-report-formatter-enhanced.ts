@@ -47,6 +47,67 @@ const AGENT_DESCRIPTIONS: Record<string, string> = {
 };
 
 /**
+ * Metric metadata with reference values and formatting information
+ */
+const METRIC_METADATA: Record<string, {
+  unit: string;
+  scale: string;
+  description: string;
+  tooltip: string;
+  format: (value: number) => string;
+}> = {
+  'functionalImpact': {
+    unit: '/ 10',
+    scale: 'Higher is better',
+    description: 'Functional Impact',
+    tooltip: 'How much value does this change add? (1-10 scale)',
+    format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)} / 10`,
+  },
+  'idealTimeHours': {
+    unit: 'hours',
+    scale: 'Ideal estimate',
+    description: 'Ideal Time Estimate',
+    tooltip: 'How many hours should this task ideally take?',
+    format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}h`,
+  },
+  'testCoverage': {
+    unit: '/ 10',
+    scale: 'Higher is better',
+    description: 'Test Coverage',
+    tooltip: 'How well is the code covered by tests? (1-10 scale)',
+    format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)} / 10`,
+  },
+  'codeQuality': {
+    unit: '/ 10',
+    scale: 'Higher is better',
+    description: 'Code Quality',
+    tooltip: 'How well-written and maintainable is the code? (1-10 scale)',
+    format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)} / 10`,
+  },
+  'codeComplexity': {
+    unit: '/ 10',
+    scale: 'Lower is better',
+    description: 'Code Complexity',
+    tooltip: 'How complex is the implementation? (1-10, lower is simpler)',
+    format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)} / 10`,
+  },
+  'actualTimeHours': {
+    unit: 'hours',
+    scale: 'Actual effort',
+    description: 'Actual Time Spent',
+    tooltip: 'How many hours were actually spent on this task?',
+    format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}h`,
+  },
+  'technicalDebtHours': {
+    unit: 'hours',
+    scale: 'Lower is better',
+    description: 'Technical Debt',
+    tooltip: 'How many hours of future work does this introduce? (lower is better)',
+    format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}h`,
+  },
+};
+
+/**
  * Detect agent name from result metadata or content
  */
 function detectAgentName(result: AgentResult, idx: number): string {
@@ -455,6 +516,49 @@ function loadEvaluationHistory(outputDir: string): EvaluationHistoryEntry[] {
 }
 
 /**
+ * Calculate statistics from history data
+ */
+function calculateHistoryStatistics(history: EvaluationHistoryEntry[], metrics: string[]): Record<string, any> {
+  const stats: Record<string, any> = {};
+
+  metrics.forEach((metric) => {
+    const values = history
+      .map((h) => (h.metrics as any)[metric])
+      .filter((v) => typeof v === 'number');
+
+    if (values.length === 0) return;
+
+    const avg = values.reduce((a, b) => a + b, 0) / values.length;
+    const sorted = [...values].sort((a, b) => a - b);
+    const median = sorted.length % 2 === 0 ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2 : sorted[Math.floor(sorted.length / 2)];
+    const variance = values.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min;
+
+    // Calculate trend (last value - first value)
+    const firstVal = values[0];
+    const lastVal = values[values.length - 1];
+    const trend = lastVal - firstVal;
+    const trendDir = trend > 0.1 ? '📈 Increasing' : trend < -0.1 ? '📉 Decreasing' : '→ Stable';
+
+    stats[metric] = {
+      avg: avg.toFixed(2),
+      median: median.toFixed(2),
+      stdDev: stdDev.toFixed(2),
+      min: min.toFixed(2),
+      max: max.toFixed(2),
+      range: range.toFixed(2),
+      trend: trendDir,
+      values,
+    };
+  });
+
+  return stats;
+}
+
+/**
  * Generate history comparison HTML
  */
 function generateHistoryHtml(history: EvaluationHistoryEntry[]): string {
@@ -466,143 +570,219 @@ function generateHistoryHtml(history: EvaluationHistoryEntry[]): string {
     return '<p class="text-muted">Only one evaluation recorded. History comparison will appear after re-evaluations.</p>';
   }
 
-  // Build comparison table
-  const metrics = ['functionalImpact', 'testCoverage', 'codeQuality', 'codeComplexity', 'technicalDebtHours'];
-  const tokens = ['inputTokens', 'outputTokens', 'totalCost'];
+  // Build comparison tables - Evaluations as ROWS, Metrics as COLUMNS
+  const allMetrics = ['functionalImpact', 'idealTimeHours', 'testCoverage', 'codeQuality', 'codeComplexity', 'actualTimeHours', 'technicalDebtHours'];
+  const stats = calculateHistoryStatistics(history, allMetrics);
 
-  const metricRows = metrics
-    .map((metric) => {
-      const label = metric.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()).trim();
-      const values = history.map((h) => {
+  // Build evaluation rows (each row is one evaluation with all metrics as columns)
+  const evaluationRows = history
+    .map((h, evalIdx) => {
+      const timestamp = new Date(h.timestamp).toLocaleString();
+      const sourceLabel = h.source === 'batch' ? '🔄 Batch' : '📝 Manual';
+
+      let rowHtml = `
+        <tr>
+          <td><strong>Evaluation #${h.evaluationNumber}</strong><br/><small class="text-muted">${timestamp}</small><br/><small>${sourceLabel}</small></td>
+      `;
+
+      allMetrics.forEach((metric) => {
         const val = (h.metrics as any)[metric];
-        return typeof val === 'number' ? val.toFixed(metric === 'technicalDebtHours' ? 2 : 1) : 'N/A';
-      });
+        const displayVal = typeof val === 'number' ? val.toFixed(1) : 'N/A';
 
-      const changes = values.map((val, idx) => {
-        if (idx === 0) return '<span class="badge bg-secondary">baseline</span>';
-        const curr = parseFloat(val);
-        const prev = parseFloat(values[idx - 1]);
-        if (isNaN(curr) || isNaN(prev)) return '—';
-        const diff = curr - prev;
-        const pct = Math.abs((diff / prev) * 100);
-        const direction = diff > 0 ? '📈' : diff < 0 ? '📉' : '→';
-        const badgeClass = diff > 0.1 ? 'bg-danger' : diff < -0.1 ? 'bg-success' : 'bg-secondary';
-        return `<span class="badge ${badgeClass}">${direction} ${Math.abs(diff).toFixed(1)} (${pct.toFixed(0)}%)</span>`;
-      });
-
-      return `
-        <tr>
-          <td><strong>${label}</strong></td>
-          ${values.map((v) => `<td class="text-center fw-bold">${v}</td>`).join('')}
-          ${changes.map((c) => `<td class="text-center" style="background-color: #f8f9fa;">${c}</td>`).join('')}
-        </tr>
-      `;
-    })
-    .join('');
-
-  const tokenRows = tokens
-    .map((token) => {
-      const label = token === 'totalCost' ? 'Total Cost ($)' : token === 'inputTokens' ? 'Input Tokens' : 'Output Tokens';
-      const values = history.map((h) => {
-        const val = (h.tokens as any)[token];
-        if (token === 'totalCost') {
-          return typeof val === 'number' ? `$${val.toFixed(4)}` : 'N/A';
+        // Calculate change from previous evaluation
+        let changeHtml = '';
+        if (evalIdx > 0) {
+          const prevVal = (history[evalIdx - 1].metrics as any)[metric];
+          if (typeof val === 'number' && typeof prevVal === 'number') {
+            const diff = val - prevVal;
+            const direction = diff > 0.05 ? '↑' : diff < -0.05 ? '↓' : '→';
+            const colorClass = diff > 0.1 ? 'text-danger' : diff < -0.1 ? 'text-success' : 'text-muted';
+            changeHtml = `<br/><small class="${colorClass}">${direction} ${Math.abs(diff).toFixed(2)}</small>`;
+          }
         }
-        return typeof val === 'number' ? val.toLocaleString() : 'N/A';
+
+        rowHtml += `<td class="text-center fw-bold">${displayVal}${changeHtml}</td>`;
       });
 
-      const changes = values.map((val, idx) => {
-        if (idx === 0) return '<span class="badge bg-secondary">baseline</span>';
-        const currStr = val.replace(/[^0-9.]/g, '');
-        const prevStr = values[idx - 1].replace(/[^0-9.]/g, '');
-        const curr = parseFloat(currStr);
-        const prev = parseFloat(prevStr);
-        if (isNaN(curr) || isNaN(prev)) return '—';
-        const diff = curr - prev;
-        const pct = Math.abs((diff / prev) * 100);
-        const direction = diff > 0 ? '📈' : diff < 0 ? '📉' : '→';
-        const badgeClass = diff > Math.abs(prev * 0.05) ? 'bg-danger' : diff < -Math.abs(prev * 0.05) ? 'bg-success' : 'bg-secondary';
-        return `<span class="badge ${badgeClass}">${direction} ${Math.abs(diff).toFixed(0)} (${pct.toFixed(0)}%)</span>`;
-      });
+      rowHtml += `</tr>`;
+      return rowHtml;
+    })
+    .join('');
+
+  // Build metric statistics rows
+  const statsRows = allMetrics
+    .map((metric) => {
+      const stat = stats[metric];
+      if (!stat) return '';
 
       return `
-        <tr>
-          <td><strong>${label}</strong></td>
-          ${values.map((v) => `<td class="text-center fw-bold">${v}</td>`).join('')}
-          ${changes.map((c) => `<td class="text-center" style="background-color: #f8f9fa;">${c}</td>`).join('')}
+        <tr class="table-light">
+          <td><strong>${metric.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()).trim()}</strong></td>
+          <td class="text-center small"><span class="badge bg-info">avg</span> ${stat.avg}</td>
+          <td class="text-center small"><span class="badge bg-secondary">med</span> ${stat.median}</td>
+          <td class="text-center small"><span class="badge bg-warning text-dark">σ</span> ${stat.stdDev}</td>
+          <td class="text-center small">${stat.min}</td>
+          <td class="text-center small">${stat.max}</td>
+          <td class="text-center small"><span class="badge bg-light text-dark">${stat.range}</span></td>
+          <td class="text-center"><strong>${stat.trend}</strong></td>
         </tr>
       `;
     })
     .join('');
 
-  const headers = history.map((h, idx) => `<th class="text-center fw-bold" style="min-width: 90px;">Eval #${h.evaluationNumber}</th>`).join('');
-  const changeHeaders = history
-    .slice(1)
-    .map((h, idx) => `<th class="text-center text-muted small" style="min-width: 100px; background-color: #f8f9fa;">Change from<br/>Previous</th>`)
-    .join('');
+  // Build convergence summary
+  const convergenceScores = history.map((h) => h.convergenceScore * 100);
+  const avgConvergence = convergenceScores.reduce((a, b) => a + b, 0) / convergenceScores.length;
+  const maxConvergence = Math.max(...convergenceScores);
+  const minConvergence = Math.min(...convergenceScores);
+  const convergenceTrend = convergenceScores[convergenceScores.length - 1] - convergenceScores[0];
+
+  const metricHeaders = allMetrics.map((m) => {
+    const label = m.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()).trim();
+    return `<th class="text-center" style="font-size: 0.85rem;">${label}</th>`;
+  }).join('');
 
   return `
     <div class="card mb-4">
       <div class="card-header bg-info text-white">
-        <h5 class="mb-0">📊 Evaluation History (${history.length} evaluations)</h5>
-        <small class="text-white-50">Track how metrics change across multiple evaluations</small>
+        <h5 class="mb-0">📊 Evaluation History & Statistical Analysis (${history.length} evaluations)</h5>
+        <small class="text-white-50">Track metric evolution, convergence trends, and statistical insights</small>
       </div>
       <div class="card-body">
+        <!-- Evaluations Table (Rows = Evaluations, Columns = Metrics) -->
         <h6 class="mb-3">
-          <span class="badge bg-light text-info">Metrics Evolution</span>
-          <small class="text-muted ms-2">All values shown | Arrows indicate direction of change</small>
+          <span class="badge bg-light text-info">📈 Metrics by Evaluation</span>
+          <small class="text-muted ms-2">Each row is one evaluation; arrows show change from previous</small>
         </h6>
         <div class="table-responsive">
           <table class="table table-sm table-hover" style="font-size: 0.9rem;">
             <thead class="table-light">
               <tr style="border-bottom: 2px solid #dee2e6;">
-                <th style="min-width: 140px;">Metric</th>
-                ${headers}
-                ${changeHeaders}
+                <th style="min-width: 150px;">Evaluation</th>
+                ${metricHeaders}
               </tr>
             </thead>
             <tbody>
-              ${metricRows}
+              ${evaluationRows}
             </tbody>
           </table>
         </div>
 
+        <!-- Statistical Analysis -->
         <h6 class="mb-3 mt-4">
-          <span class="badge bg-light text-info">Token Usage & Cost Evolution</span>
-          <small class="text-muted ms-2">API resource consumption across evaluations</small>
+          <span class="badge bg-light text-info">📊 Statistical Analysis</span>
+          <small class="text-muted ms-2">Average, median, std deviation, trend across all evaluations</small>
         </h6>
         <div class="table-responsive">
-          <table class="table table-sm table-hover" style="font-size: 0.9rem;">
+          <table class="table table-sm" style="font-size: 0.85rem;">
             <thead class="table-light">
               <tr style="border-bottom: 2px solid #dee2e6;">
                 <th style="min-width: 140px;">Metric</th>
-                ${headers}
-                ${changeHeaders}
+                <th class="text-center"><small>Average</small></th>
+                <th class="text-center"><small>Median</small></th>
+                <th class="text-center"><small>Std Dev (σ)</small></th>
+                <th class="text-center"><small>Min</small></th>
+                <th class="text-center"><small>Max</small></th>
+                <th class="text-center"><small>Range</small></th>
+                <th class="text-center"><small>Trend</small></th>
               </tr>
             </thead>
             <tbody>
-              ${tokenRows}
+              ${statsRows}
             </tbody>
           </table>
         </div>
 
+        <!-- Token & Cost Summary -->
         <h6 class="mb-3 mt-4">
-          <span class="badge bg-light text-info">Convergence Scores</span>
-          <small class="text-muted ms-2">Agent consensus percentage per evaluation</small>
+          <span class="badge bg-light text-info">💾 Token Usage & Cost</span>
+          <small class="text-muted ms-2">API resource consumption tracking</small>
+        </h6>
+        <div class="table-responsive">
+          <table class="table table-sm" style="font-size: 0.9rem;">
+            <thead class="table-light">
+              <tr style="border-bottom: 2px solid #dee2e6;">
+                <th style="min-width: 150px;">Evaluation</th>
+                <th class="text-center">Input Tokens</th>
+                <th class="text-center">Output Tokens</th>
+                <th class="text-center">Total Tokens</th>
+                <th class="text-center">Cost ($)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${history
+                .map(
+                  (h, idx) => `
+                <tr>
+                  <td><strong>Eval #${h.evaluationNumber}</strong> <small class="text-muted">${new Date(h.timestamp).toLocaleString()}</small></td>
+                  <td class="text-center">${(h.tokens?.inputTokens || 0).toLocaleString()}</td>
+                  <td class="text-center">${(h.tokens?.outputTokens || 0).toLocaleString()}</td>
+                  <td class="text-center"><strong>${(h.tokens?.totalTokens || 0).toLocaleString()}</strong></td>
+                  <td class="text-center"><strong>$${((h.tokens?.totalCost as any) || 0).toFixed(4)}</strong></td>
+                </tr>
+              `
+                )
+                .join('')}
+              <tr class="table-light fw-bold">
+                <td>Total</td>
+                <td class="text-center">${history.reduce((sum, h) => sum + (h.tokens?.inputTokens || 0), 0).toLocaleString()}</td>
+                <td class="text-center">${history.reduce((sum, h) => sum + (h.tokens?.outputTokens || 0), 0).toLocaleString()}</td>
+                <td class="text-center">${history.reduce((sum, h) => sum + (h.tokens?.totalTokens || 0), 0).toLocaleString()}</td>
+                <td class="text-center">$${history.reduce((sum, h) => sum + ((h.tokens?.totalCost as any) || 0), 0).toFixed(4)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Convergence Summary -->
+        <h6 class="mb-3 mt-4">
+          <span class="badge bg-light text-info">🎯 Convergence Analysis</span>
+          <small class="text-muted ms-2">Agent consensus metrics across evaluations</small>
         </h6>
         <div class="row">
+          <div class="col-md-3 mb-3">
+            <div class="p-3 bg-light rounded text-center border">
+              <small class="d-block text-muted">Average Convergence</small>
+              <strong style="font-size: 1.8rem;" class="d-block text-info">${avgConvergence.toFixed(1)}%</strong>
+              <small class="text-muted">Overall agreement level</small>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="p-3 bg-light rounded text-center border">
+              <small class="d-block text-muted">Highest</small>
+              <strong style="font-size: 1.8rem;" class="d-block text-success">${maxConvergence.toFixed(1)}%</strong>
+              <small class="text-muted">Best consensus</small>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="p-3 bg-light rounded text-center border">
+              <small class="d-block text-muted">Lowest</small>
+              <strong style="font-size: 1.8rem;" class="d-block text-warning">${minConvergence.toFixed(1)}%</strong>
+              <small class="text-muted">Most discussion</small>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="p-3 bg-light rounded text-center border">
+              <small class="d-block text-muted">Trend</small>
+              <strong style="font-size: 1.5rem;" class="d-block ${convergenceTrend > 2 ? 'text-success' : convergenceTrend < -2 ? 'text-danger' : 'text-muted'}">${convergenceTrend > 2 ? '📈' : convergenceTrend < -2 ? '📉' : '→'}</strong>
+              <small class="text-muted">${Math.abs(convergenceTrend).toFixed(1)}% ${convergenceTrend > 2 ? 'improving' : convergenceTrend < -2 ? 'declining' : 'stable'}</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Individual Scores -->
+        <div class="row mt-3">
           ${history
             .map(
-              (h, idx) => {
+              (h) => {
                 const score = h.convergenceScore * 100;
                 const scoreClass = score >= 85 ? 'bg-success' : score >= 70 ? 'bg-info' : 'bg-warning';
                 const scoreLabel = score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : 'Fair';
                 return `
-            <div class="col-md-3 mb-3">
-              <div class="p-3 ${scoreClass} text-white rounded text-center">
-                <small class="d-block opacity-75">Evaluation #${h.evaluationNumber}</small>
-                <strong style="font-size: 1.8rem;">${score.toFixed(0)}%</strong>
-                <small class="d-block opacity-75">${scoreLabel} Consensus</small>
+            <div class="col-md-3 mb-2">
+              <div class="p-2 ${scoreClass} text-white rounded text-center" style="font-size: 0.9rem;">
+                <small class="d-block opacity-75">Eval #${h.evaluationNumber}</small>
+                <strong>${score.toFixed(0)}%</strong> <small class="opacity-75">${scoreLabel}</small>
               </div>
             </div>
           `;
@@ -610,9 +790,12 @@ function generateHistoryHtml(history: EvaluationHistoryEntry[]): string {
             )
             .join('')}
         </div>
+
         <p class="small text-muted mt-3">
-          <strong>📊 What this means:</strong> Higher convergence scores indicate greater agreement among agents about code metrics.
-          <strong>85%+</strong> = Excellent consensus | <strong>70-84%</strong> = Good consensus | <strong>&lt;70%</strong> = More discussion needed
+          <strong>📊 Interpretation:</strong>
+          <strong>σ (Sigma)</strong> shows metric variability across evaluations. Lower values = more stable metrics.
+          <strong>Trend</strong> shows direction: ↑ Increasing | ↓ Decreasing | → Stable.
+          <strong>Convergence</strong> measures agent agreement: 85%+ = Excellent | 70-84% = Good | &lt;70% = Needs more discussion
         </p>
       </div>
     </div>
@@ -678,17 +861,22 @@ export function generateEnhancedHtmlReport(
       icon = data.value <= 0 ? '✅' : data.value <= 4 ? '⚠️' : '❌';
     }
 
+    const metadata = METRIC_METADATA[metric as keyof typeof METRIC_METADATA];
+    const formattedValue = metadata ? metadata.format(data.value) : data.value.toFixed(1);
+    const scale = metadata ? metadata.scale : '';
+    const tooltip = metadata ? metadata.tooltip : '';
+
     return `
-              <div class="col-md-6 mb-3">
-                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded">
-                  <div>
-                    <strong>${icon} ${label}</strong>
-                    <br>
-                    <small class="text-muted">by ${data.agent}</small>
+              <div class="col-md-6 mb-2">
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded" title="${tooltip}" style="gap: 1rem;">
+                  <div style="font-size: 0.85rem; min-width: 0; flex: 1;">
+                    <div style="font-weight: 600; line-height: 1.2;">${icon} ${label}</div>
+                    <div style="color: #666; font-size: 0.8rem; line-height: 1.2;">by ${data.agent}</div>
+                    ${scale ? `<div style="color: #999; font-size: 0.75rem; line-height: 1.2;">📍 ${scale}</div>` : ''}
                   </div>
-                  <h3 class="mb-0">
-                    <span class="badge bg-${badgeColor}">${data.value}</span>
-                  </h3>
+                  <div style="white-space: nowrap; flex-shrink: 0;">
+                    <span class="badge bg-${badgeColor}" style="font-size: 0.95rem; padding: 0.4rem 0.6rem;">${formattedValue}</span>
+                  </div>
                 </div>
               </div>
             `;
@@ -747,8 +935,8 @@ export function generateEnhancedHtmlReport(
   });
   agentCardsHtml += '</div>';
 
-  // Generate Conversation Timeline
-  let timelineHtml = '<div class="timeline">';
+  // Generate Conversation Timeline with round phases
+  let timelineHtml = '';
   const allEvaluations: AgentEvaluation[] = [];
   groupedResults.forEach(evals => allEvaluations.push(...evals));
 
@@ -758,100 +946,137 @@ export function generateEnhancedHtmlReport(
     return a.agentName.localeCompare(b.agentName);
   });
 
-  let currentRound = 0;
-  allEvaluations.forEach(evaluation => {
+  const roundPhases = [
+    { title: 'Initial Analysis', description: 'Initial evaluation from all agents', emoji: '🔍' },
+    { title: 'Concerns & Questions', description: 'Agents discuss findings and address concerns', emoji: '❓' },
+    { title: 'Validation', description: 'Final consensus and validation', emoji: '✅' }
+  ];
+
+  let currentRound = -1;
+  allEvaluations.forEach((evaluation, idx) => {
     if (evaluation.round !== currentRound) {
       currentRound = evaluation.round;
+      const roundIndex = currentRound - 1; // Convert to 0-based for phase lookup
+      const phase = roundPhases[roundIndex] || { title: `Round ${currentRound}`, description: '', emoji: '🔄' };
       timelineHtml += `
-        <div class="timeline-round">
-          <h4 class="text-center mb-4">
-            <span class="badge bg-dark">Round ${currentRound}</span>
-          </h4>
+        <div style="margin: 2rem 0 1.5rem 0; padding-bottom: 1rem; border-bottom: 2px solid #e9ecef;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.5rem;">${phase.emoji}</span>
+            <h4 style="margin: 0; font-size: 1.1rem; color: #333;">Round ${currentRound}: ${phase.title}</h4>
+          </div>
+          <p style="margin: 0; font-size: 0.9rem; color: #666;">${phase.description}</p>
         </div>
       `;
     }
 
+    // Simplified card with only essential information
+    const concernsHtml = evaluation.concernsRaised.length > 0 ? `
+      <div style="margin-top: 0.75rem; padding: 0.75rem; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px;">
+        <strong style="font-size: 0.85rem; color: #856404;">Concerns:</strong>
+        <ul style="margin: 0.5rem 0 0 1rem; padding: 0; font-size: 0.85rem; color: #856404;">
+          ${evaluation.concernsRaised.map(c => `<li>${c}</li>`).join('')}
+        </ul>
+      </div>
+    ` : '';
+
+    const referencesHtml = evaluation.referencesTo.length > 0 ? `
+      <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #0d6efd;">
+        💬 References: <strong>${evaluation.referencesTo.join(', ')}</strong>
+      </div>
+    ` : '';
+
     timelineHtml += `
-      <div class="timeline-item border-${evaluation.color}" data-agent="${evaluation.agentName}">
-        <div class="timeline-marker bg-${evaluation.color}">
-          <span style="font-size: 1.5rem;">${evaluation.icon}</span>
+      <div style="margin-bottom: 1.5rem; padding: 1rem; border-radius: 8px; background: #f8f9fa; border-left: 4px solid #0d6efd;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+          <span style="font-size: 1.3rem;">${evaluation.icon}</span>
+          <strong style="font-size: 0.95rem;">${evaluation.agentName}</strong>
+          <span style="font-size: 0.8rem; color: #999; margin-left: auto;">Round ${evaluation.round}</span>
         </div>
-        <div class="timeline-content card border-${evaluation.color}">
-          <div class="card-header bg-${evaluation.color} bg-opacity-10">
-            <strong>${evaluation.agentName}</strong>
-            ${evaluation.referencesTo.length > 0 ? `
-              <span class="ms-2 small text-muted">
-                💬 References: ${evaluation.referencesTo.join(', ')}
-              </span>
-            ` : ''}
-          </div>
-          <div class="card-body">
-            <p class="mb-2">${evaluation.summary}</p>
-            ${evaluation.metrics ? `
-              <div class="mt-2">
-                ${Object.entries(evaluation.metrics).map(([key, value]) => {
-      const label = key.replace(/([A-Z])/g, ' $1').trim();
-      return `<span class="badge bg-${evaluation.color} bg-opacity-75 me-1">${label}: ${value}</span>`;
-    }).join('')}
-              </div>
-            ` : ''}
-          </div>
-        </div>
+        <p style="margin: 0 0 0.75rem 0; font-size: 0.9rem; line-height: 1.4; color: #333;">${evaluation.summary}</p>
+        ${concernsHtml}
+        ${referencesHtml}
       </div>
     `;
   });
-  timelineHtml += '</div>';
 
-  // Determine max rounds from evaluations
-  const maxRound = Math.max(...Array.from(groupedResults.values()).flatMap(evals => evals.map(e => e.round)));
+  timelineHtml = `<div style="background: white; padding: 0; border-radius: 8px;">${timelineHtml}</div>`;
 
-  // Generate dynamic round headers
-  const roundHeaders = Array.from({ length: maxRound }, (_, i) => `<th>Round ${i + 1}</th>`).join('\n              ');
+  // Determine min and max rounds from evaluations
+  const allRounds = Array.from(groupedResults.values()).flatMap(evals => evals.map(e => e.round));
+  const minRound = Math.min(...allRounds);
+  const maxRound = Math.max(...allRounds);
 
-  // Generate Metric Evolution Table
+  // Map metric keys to full names
+  const metricNames: Record<string, string> = {
+    'functionalImpact': 'Functional Impact',
+    'idealTimeHours': 'Ideal Time Estimate',
+    'testCoverage': 'Test Coverage',
+    'codeQuality': 'Code Quality',
+    'codeComplexity': 'Code Complexity',
+    'actualTimeHours': 'Actual Time Spent',
+    'technicalDebtHours': 'Technical Debt'
+  };
+
+  // Generate Metric Evolution Table - ROUNDS AS ROWS, METRICS AS COLUMNS
   const evolutionHtml = `
     <div class="card mb-4 shadow-sm">
       <div class="card-header bg-dark text-white">
         <h5 class="mb-0">📈 Metric Evolution Across Rounds</h5>
       </div>
       <div class="card-body">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>Metric</th>
-              ${roundHeaders}
-              <th>Change</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${metricEvolution.map(evolution => {
-    // Get values for all rounds dynamically
-    const roundValues = Array.from({ length: maxRound }, (_, i) =>
-      evolution.rounds.get(i + 1)
-    );
-    const roundCells = roundValues.map(val => `<td>${val !== undefined ? val : '-'}</td>`).join('\n                ');
+        <div style="overflow-x: auto;">
+          <table class="table table-hover table-sm">
+            <thead>
+              <tr>
+                <th style="min-width: 120px; position: sticky; left: 0; background: #f8f9fa;">Round</th>
+                ${metricEvolution.map(evolution => {
+      const fullName = metricNames[evolution.metric] || evolution.metric.replace(/([A-Z])/g, ' $1').trim();
+      return `<th style="text-align: center; min-width: 140px;">${fullName}</th>`;
+    }).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${Array.from({ length: maxRound - minRound + 1 }, (_, idx) => {
+      const roundNum = minRound + idx;
+      const roundIndex = roundNum - 1; // Convert to 0-based index for phase lookup
+      const roundPhases = ['Initial Analysis', 'Concerns & Questions', 'Validation'];
+      const phaseLabel = roundPhases[roundIndex] || `Round ${roundNum}`;
 
-    // Calculate change between first and last round
-    const firstValue = roundValues.find(v => v !== undefined);
-    const lastValue = [...roundValues].reverse().find(v => v !== undefined);
-    let changeCell = '<span class="text-muted">No change</span>';
+      return `
+                <tr>
+                  <td style="font-weight: 600; position: sticky; left: 0; background: #f8f9fa;">
+                    <span title="Round ${roundNum}: ${phaseLabel}">
+                      ${roundIndex === 0 ? '🔍' : roundIndex === 1 ? '❓' : roundIndex === 2 ? '✅' : '🔄'} Round ${roundNum}
+                    </span>
+                  </td>
+                  ${metricEvolution.map(evolution => {
+        const value = evolution.rounds.get(roundNum);
+        const previousValue = roundNum > minRound ? evolution.rounds.get(roundNum - 1) : undefined;
+        let cellContent = value !== undefined ? value.toFixed(1) : '—';
+        let cellStyle = '';
 
-    if (firstValue !== undefined && lastValue !== undefined && firstValue !== lastValue) {
-      const diff = lastValue - firstValue;
-      const arrow = diff > 0 ? '↑' : '↓';
-      const badgeClass = diff > 0 ? 'bg-success' : 'bg-info';
-      changeCell = `<span class="badge ${badgeClass}">${arrow} ${Math.abs(diff).toFixed(2)}</span>`;
-    }
+        // Add change indicator
+        if (value !== undefined && previousValue !== undefined) {
+          const diff = value - previousValue;
+          if (Math.abs(diff) > 0.05) {
+            const arrow = diff > 0 ? '↑' : '↓';
+            const color = diff > 0 ? '#28a745' : '#dc3545';
+            cellContent = '<span style="color: ' + color + '; font-weight: 600;">' + arrow + ' ' + cellContent + '</span>';
+            cellStyle = 'background-color: rgba(0,0,0,0.02);';
+          }
+        }
 
-    return `
-              <tr class="${evolution.changed ? 'table-warning' : ''}">
-                <td><strong>${evolution.metric.replace(/([A-Z])/g, ' $1').trim()}</strong></td>
-                ${roundCells}
-                <td>${changeCell}</td>
-              </tr>`;
-  }).join('')}
-          </tbody>
-        </table>
+        return '<td style="text-align: center; ' + cellStyle + '; padding: 0.75rem 0.5rem;">' + cellContent + '</td>';
+      }).join('')}
+                </tr>
+              `;
+    }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top: 1rem; font-size: 0.85rem; color: #666;">
+          <div>📍 <strong>Legend:</strong> ↑ Increased | ↓ Decreased | — Not evaluated in this round</div>
+        </div>
       </div>
     </div>
   `;
@@ -911,11 +1136,20 @@ export function generateEnhancedHtmlReport(
       background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
     }
     .timeline-round {
-      margin: 40px 0 20px 0;
+      margin: 3rem 0 2rem 0;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+      border-left: 4px solid #667eea;
+      border-radius: 4px;
+    }
+    .round-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
     }
     .timeline-item {
       position: relative;
-      margin-bottom: 30px;
+      margin-bottom: 2rem;
       margin-left: 60px;
     }
     .timeline-marker {
@@ -930,9 +1164,15 @@ export function generateEnhancedHtmlReport(
       justify-content: center;
       border: 4px solid white;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      font-size: 1.5rem;
     }
     .timeline-content {
       animation: slideIn 0.3s ease-out;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .timeline-content:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     }
     @keyframes slideIn {
       from {
