@@ -223,8 +223,8 @@ export function createCommitEvaluationGraph(
         try {
             // Only generate if not already provided
             if (state.developerOverview && state.developerOverview.trim().length > 0) {
-                // Already have an overview, don't modify state
-                return {};
+                // Already have an overview, preserve it through the state
+                return { developerOverview: state.developerOverview };
             }
 
             if (!state.commitDiff) {

@@ -28,7 +28,10 @@ export class DeveloperOverviewGenerator {
         const prompt = this.buildPrompt(commitDiff, filesChanged, commitMessage);
 
         // Get the configured LLM model (reuses same provider/config as agents)
-        const model = LLMService.getChatModel(this.config);
+        // Override maxTokens to 500 for concise developer overview
+        const config = { ...this.config };
+        config.llm = { ...config.llm, maxTokens: 500 };
+        const model = LLMService.getChatModel(config);
 
         // Invoke the model using LangChain's standardized interface
         const result = await model.invoke([
@@ -55,6 +58,8 @@ export class DeveloperOverviewGenerator {
         commitMessage?: string,
     ): string {
         return `You are analyzing a commit to generate a structured overview for a code review team.
+Your response MUST be valid JSON with NO additional text.
+Keep your response under 400 tokens.
 
 ${commitMessage ? `Commit Message: ${commitMessage}\n\n` : ''}Files Changed: ${filesChanged.join(', ')}
 
@@ -63,42 +68,64 @@ Commit Diff:
 ${commitDiff}
 \`\`\`
 
-Please analyze this commit and provide a structured overview in JSON format. Keep responses concise:
+Analyze this commit and respond with ONLY this JSON structure (no markdown, no code fences, no extra text):
 {
-  "summary": "One-line summary, max 100 chars (e.g., 'Added caching layer to improve API response times')",
-  "description": "2-3 sentences max, ~150 chars. What changed and why.",
-  "keyPoints": ["Change 1 (brief)", "Change 2 (brief)", "Change 3 (brief)"],
+  "summary": "One-line summary, max 100 chars. What is the main change?",
+  "description": "2-3 sentences max (~150 chars). What changed and why?",
+  "keyPoints": ["Change 1 (brief)", "Change 2 (brief)", "Change 3 (brief max)"],
   "testingApproach": "Brief testing note, max 100 chars"
 }
 
-CRITICAL: Return ONLY the JSON object. No markdown headers, no extra text, no code fences.
-
-Focus on WHAT, WHY, and IMPACT. Be concise.`;
+CRITICAL INSTRUCTIONS:
+1. Return ONLY valid JSON - no markdown, headers, or code fences
+2. Keep all string values under 150 chars
+3. Return the complete JSON object with all 4 fields
+4. If parsing would exceed token limit, truncate descriptions
+5. Do not include newlines in string values (use spaces instead)`;
     }
 
     /**
      * Parse Claude's response into DeveloperOverview
+     * Uses robust brace-counting to handle truncation and markdown-wrapped JSON
      */
     private parseResponse(responseText: string): DeveloperOverview {
         try {
-            let cleanOutput = responseText.trim();
+            let cleaned = responseText.trim();
 
-            // Try to extract JSON from the response
-            const jsonMatch = cleanOutput.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-                throw new Error('No JSON found in response');
+            // Remove markdown code fences if present
+            cleaned = cleaned.replace(/^```(?:json|javascript)?\s*\n?/i, '');
+            cleaned = cleaned.replace(/\n?```\s*$/i, '');
+            cleaned = cleaned.trim();
+
+            // Find JSON start
+            const jsonStart = cleaned.indexOf('{');
+            if (jsonStart === -1) {
+                throw new Error('No JSON object found in output');
             }
 
-            cleanOutput = jsonMatch[0];
+            // Count braces to find balanced JSON object
+            let braceCount = 0;
+            let jsonEnd = -1;
 
-            // Try to close incomplete JSON if needed (handles truncated responses)
-            let braceCount = (cleanOutput.match(/\{/g) || []).length;
-            let closingBraces = (cleanOutput.match(/\}/g) || []).length;
-            if (braceCount > closingBraces) {
-                cleanOutput += '}'.repeat(braceCount - closingBraces);
+            for (let i = jsonStart; i < cleaned.length; i++) {
+                if (cleaned[i] === '{') {
+                    braceCount++;
+                } else if (cleaned[i] === '}') {
+                    braceCount--;
+                    if (braceCount === 0) {
+                        jsonEnd = i;
+                        break;
+                    }
+                }
             }
 
-            const parsed = JSON.parse(cleanOutput);
+            if (jsonEnd === -1) {
+                throw new Error('Incomplete JSON object - unmatched braces');
+            }
+
+            // Extract balanced JSON portion only
+            const jsonStr = cleaned.substring(jsonStart, jsonEnd + 1);
+            const parsed = JSON.parse(jsonStr);
 
             return {
                 summary: parsed.summary || 'Changes to the codebase',

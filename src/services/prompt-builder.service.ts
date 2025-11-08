@@ -178,17 +178,19 @@ export class PromptBuilderService {
      */
     static buildOutputRequirements(): string {
         return [
-            '## Output Requirements',
+            '## Output Requirements (TOKEN-CONSTRAINED)',
             '',
-            '**You MUST return ONLY valid JSON** in the following format (keep details under 500 chars):',
+            '**You MUST return ONLY valid JSON** (max 1000 tokens output):',
             '',
             '{',
             '  "summary": "A conversational 2-3 sentence overview (max 150 chars)",',
-            '  "details": "Brief explanation of your analysis (max 400 chars). Be concise.",',
+            '  "details": "Brief explanation of your analysis (max 400 chars). Be concise. Truncate if needed.",',
             '  "metrics": {',
             this.formatMetricsTemplate(),
             '  }',
             '}',
+            '',
+            'TOKEN GUIDANCE: This output format should use ~200-400 tokens typically. Leave buffer if discussion is very complex.',
             '',
         ].join('\n');
     }
@@ -198,12 +200,18 @@ export class PromptBuilderService {
      */
     static buildImportantNotes(): string {
         return [
-            '## Important Notes',
-            '- CRITICAL: Return ONLY the JSON object, no markdown, no extra text',
+            '## Important Notes & Token Constraints',
+            '- CRITICAL: Return ONLY the JSON object, no markdown, no extra text, no code fences',
             '- CRITICAL: Include ONLY these 7 metrics - no additional fields, no extra metrics',
             '- ALL 7 metrics are required and MUST be the ONLY metrics in your response',
+            '- Output constraints:',
+            '  - Summary field: max 150 characters',
+            '  - Details field: max 400 characters',
+            '  - Total JSON response: keep under 1000 tokens (rough estimate: 3-4 chars per token)',
             '- Be concise: prioritize metrics over lengthy explanations',
-            '- Respond to other team members\' concerns',
+            '- Keep all string values concise and avoid unnecessary newlines',
+            '- If your response is too long, truncate details field rather than omitting metrics',
+            '- Respond to other team members\' concerns, but briefly',
             '',
         ].join('\n');
     }

@@ -263,6 +263,54 @@ export abstract class BaseAgentWorkflow implements Agent {
         ].join('\n');
     }
 
+    /**
+     * Safely parse JSON from LLM output, handling markdown fences and truncation
+     * Uses brace-counting to find the complete JSON object
+     */
+    protected parseJSONSafely(output: string): any {
+        let cleaned = output.trim();
+
+        // Remove markdown fences more carefully (before and after)
+        cleaned = cleaned.replace(/^```(?:json|javascript)?\s*\n?/i, '');
+        cleaned = cleaned.replace(/\n?```\s*$/i, '');
+        cleaned = cleaned.trim();
+
+        // Find the start of the JSON object
+        const jsonStart = cleaned.indexOf('{');
+        if (jsonStart === -1) {
+            throw new Error('No JSON object found in output');
+        }
+
+        // Count braces from the start to find the complete JSON object
+        let braceCount = 0;
+        let jsonEnd = -1;
+
+        for (let i = jsonStart; i < cleaned.length; i++) {
+            const char = cleaned[i];
+
+            if (char === '{') {
+                braceCount++;
+            } else if (char === '}') {
+                braceCount--;
+                if (braceCount === 0) {
+                    jsonEnd = i;
+                    break;
+                }
+            }
+        }
+
+        if (jsonEnd === -1) {
+            throw new Error('Incomplete JSON object - unmatched braces');
+        }
+
+        // Extract exactly the balanced JSON portion
+        const jsonStr = cleaned.substring(jsonStart, jsonEnd + 1);
+
+        // Parse and return
+        const parsed = JSON.parse(jsonStr);
+        return parsed;
+    }
+
     protected parseLLMResult(output: any): AgentResult {
         // Default: return as summary
         return {

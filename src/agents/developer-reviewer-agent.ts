@@ -188,26 +188,8 @@ export class DeveloperReviewerAgent extends BaseAgentWorkflow {
         // Try to parse JSON output from LLM
         if (typeof output === 'string') {
             try {
-                // Strip markdown code fences if present
-                let cleanOutput = output.trim();
-                if (cleanOutput.startsWith('```json') || cleanOutput.startsWith('```')) {
-                    cleanOutput = cleanOutput.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-                }
-
-                // Extract JSON object if there's extra content (markdown headers, etc.)
-                const jsonMatch = cleanOutput.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    cleanOutput = jsonMatch[0];
-                }
-
-                // Try to close incomplete JSON if needed
-                let braceCount = (cleanOutput.match(/\{/g) || []).length;
-                let closingBraces = (cleanOutput.match(/\}/g) || []).length;
-                if (braceCount > closingBraces) {
-                    cleanOutput += '}'.repeat(braceCount - closingBraces);
-                }
-
-                const parsed = JSON.parse(cleanOutput);
+                // Use robust JSON parsing that handles markdown fences and truncation
+                const parsed = this.parseJSONSafely(output);
 
                 // Validate required fields
                 if (!parsed.summary || typeof parsed.summary !== 'string') {
