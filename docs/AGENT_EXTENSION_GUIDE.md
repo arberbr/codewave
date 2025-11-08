@@ -5,6 +5,7 @@ This guide explains how to extend CodeWave with new agents or modify existing ag
 ## Overview
 
 CodeWave uses a **centralized prompt builder pattern** to ensure all agents:
+
 - Follow consistent rules and structure
 - Return properly formatted metrics (the 7 pillars)
 - Can be easily extended from outside the library
@@ -109,16 +110,16 @@ Define which metrics your agent specializes in:
 ```typescript
 // src/constants/agent-weights.constants.ts
 export const AGENT_EXPERTISE_WEIGHTS: Record<string, AgentWeights> = {
-    'my-agent': {
-        functionalImpact: 0.130,    // TERTIARY (13%)
-        idealTimeHours: 0.083,      // TERTIARY (8.3%)
-        testCoverage: 0.200,        // SECONDARY (20%)
-        codeQuality: 0.333,         // PRIMARY (33.3%)
-        codeComplexity: 0.125,      // TERTIARY (12.5%)
-        actualTimeHours: 0.097,     // TERTIARY (9.7%)
-        technicalDebtHours: 0.032,  // TERTIARY (3.2%)
-    },
-    // ...
+  'my-agent': {
+    functionalImpact: 0.13, // TERTIARY (13%)
+    idealTimeHours: 0.083, // TERTIARY (8.3%)
+    testCoverage: 0.2, // SECONDARY (20%)
+    codeQuality: 0.333, // PRIMARY (33.3%)
+    codeComplexity: 0.125, // TERTIARY (12.5%)
+    actualTimeHours: 0.097, // TERTIARY (9.7%)
+    technicalDebtHours: 0.032, // TERTIARY (3.2%)
+  },
+  // ...
 };
 ```
 
@@ -131,10 +132,11 @@ The `PromptBuilderService` provides static methods to build consistent prompts:
 ### Build Complete System Prompt
 
 ```typescript
-PromptBuilderService.buildCompleteSystemPrompt(config, roundPurpose, previousContext)
+PromptBuilderService.buildCompleteSystemPrompt(config, roundPurpose, previousContext);
 ```
 
 This combines:
+
 - Header with agent role
 - Round-specific instructions
 - Scoring philosophy
@@ -178,6 +180,7 @@ All agents MUST return metrics in this exact format:
 ```
 
 **CRITICAL RULES**:
+
 - ONLY these 7 metrics, NO additional fields
 - All metrics required
 - metrics field must be an object (not array)
@@ -190,29 +193,33 @@ All agents MUST return metrics in this exact format:
 import { PromptBuilderService, AgentPromptConfig } from '../services/prompt-builder.service';
 
 export class SecurityReviewerAgent extends BaseAgentWorkflow {
-    protected buildSystemPrompt(context: AgentContext): string {
-        const roundPurpose = (context.roundPurpose || 'initial') as 'initial' | 'concerns' | 'validation';
-        const previousContext = context.agentResults?.length > 0
-            ? context.agentResults
-                .map((r: AgentResult) => `**${r.agentName}**: ${r.summary}`)
-                .join('\n\n')
-            : '';
+  protected buildSystemPrompt(context: AgentContext): string {
+    const roundPurpose = (context.roundPurpose || 'initial') as
+      | 'initial'
+      | 'concerns'
+      | 'validation';
+    const previousContext =
+      context.agentResults?.length > 0
+        ? context.agentResults
+            .map((r: AgentResult) => `**${r.agentName}**: ${r.summary}`)
+            .join('\n\n')
+        : '';
 
-        return PromptBuilderService.buildCompleteSystemPrompt(
-            {
-                role: 'Security Reviewer',
-                description: 'Evaluates security implications, vulnerabilities, and compliance',
-                agentKey: 'security-reviewer',
-                primaryMetrics: ['codeQuality'], // Security aspects of code quality
-                secondaryMetrics: ['technicalDebtHours'], // Security debt
-            },
-            roundPurpose,
-            previousContext
-        );
-    }
+    return PromptBuilderService.buildCompleteSystemPrompt(
+      {
+        role: 'Security Reviewer',
+        description: 'Evaluates security implications, vulnerabilities, and compliance',
+        agentKey: 'security-reviewer',
+        primaryMetrics: ['codeQuality'], // Security aspects of code quality
+        secondaryMetrics: ['technicalDebtHours'], // Security debt
+      },
+      roundPurpose,
+      previousContext
+    );
+  }
 
-    protected async buildHumanPrompt(context: AgentContext): Promise<string> {
-        return `
+  protected async buildHumanPrompt(context: AgentContext): Promise<string> {
+    return `
         Please analyze this code for security issues:
         - Vulnerabilities (CWE, OWASP Top 10)
         - Data protection and privacy
@@ -221,7 +228,7 @@ export class SecurityReviewerAgent extends BaseAgentWorkflow {
 
         Score the 7 pillars with focus on security aspects.
         `;
-    }
+  }
 }
 ```
 
@@ -283,7 +290,7 @@ To update existing agents to use centralized prompts:
 ## Questions?
 
 Refer to:
+
 - `src/constants/agent-weights.constants.ts` - Pillar definitions and weights
 - `src/services/prompt-builder.service.ts` - Prompt builder API
 - `src/agents/developer-author-agent.ts` - Reference implementation
-

@@ -1,5 +1,12 @@
 # CodeWave: AI-Powered Commit Intelligence
 
+[![npm](https://img.shields.io/npm/v/@techdebtgpt/codewave?style=flat-square)](https://www.npmjs.com/package/@techdebtgpt/codewave)
+[![license](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen?style=flat-square)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue?style=flat-square)](https://www.typescriptlang.org/)
+[![GitHub issues](https://img.shields.io/github/issues/techdebtgpt/codewave?style=flat-square)](https://github.com/techdebtgpt/codewave/issues)
+[![GitHub stars](https://img.shields.io/github/stars/techdebtgpt/codewave?style=flat-square)](https://github.com/techdebtgpt/codewave)
+
 **Multi-agent conversational system for comprehensive code quality evaluation using a 7-pillar methodology.**
 
 CodeWave is a sophisticated Node.js CLI tool that leverages multiple AI agents in a coordinated discussion framework to perform in-depth analysis of Git commits. Using LangChain, LangGraph, and multiple LLM providers, CodeWave generates beautiful interactive HTML reports with conversation timelines, detailed metrics, and actionable insights.
@@ -23,6 +30,7 @@ CodeWave is a sophisticated Node.js CLI tool that leverages multiple AI agents i
 ## Installation
 
 ### Prerequisites
+
 - **Node.js**: 18.0.0 or later
 - **npm**: 9.0.0 or later
 - **Git**: 2.0.0 or later
@@ -31,7 +39,13 @@ CodeWave is a sophisticated Node.js CLI tool that leverages multiple AI agents i
 ### Install from npm
 
 ```bash
-npm install -g codewave
+npm install -g @techdebtgpt/codewave
+```
+
+Then use the command:
+
+```bash
+codewave --help
 ```
 
 ### Local Development
@@ -54,6 +68,7 @@ codewave config
 ```
 
 This launches an interactive wizard where you'll configure:
+
 - **LLM Provider**: Choose Anthropic Claude, OpenAI, or Google Gemini
 - **API Keys**: Set your LLM provider credentials
 - **Model Selection**: Pick your preferred model for each provider
@@ -68,12 +83,14 @@ codewave evaluate <commit-hash>
 ```
 
 **Example:**
+
 ```bash
 codewave evaluate HEAD
 codewave evaluate a1b2c3d
 ```
 
 The system will:
+
 1. Fetch the commit details from the Git repository
 2. Extract the diff and metadata
 3. Run multi-agent conversation workflow
@@ -86,6 +103,7 @@ codewave batch-evaluate [options]
 ```
 
 **Examples:**
+
 ```bash
 # Evaluate last 10 commits on current branch
 codewave batch-evaluate --count 10
@@ -120,7 +138,9 @@ Evaluation results are organized in `.evaluated-commits/` directory:
 ### Output Files Explained
 
 #### `report.html`
+
 Interactive report featuring:
+
 - Commit metadata (hash, author, date, message)
 - Agent roles and responsibilities
 - Round-by-round conversation timeline
@@ -130,7 +150,9 @@ Interactive report featuring:
 - Beautiful responsive design
 
 #### `results.json`
+
 Structured data including:
+
 - Commit information and diff
 - Full conversation transcript
 - All agent responses and reasoning
@@ -139,9 +161,11 @@ Structured data including:
 - Processing metadata (tokens used, cost, duration)
 
 #### `commit.diff`
+
 Original unified diff format for reference and archival.
 
 #### `summary.txt`
+
 Quick text summary with key metrics and top 3 recommendations.
 
 ---
@@ -157,9 +181,11 @@ codewave evaluate <commit-hash> [options]
 ```
 
 **Arguments:**
+
 - `<commit-hash>` - Git commit hash or reference (HEAD, branch name, etc.)
 
 **Options:**
+
 - `-o, --output <dir>` - Output directory (default: `.evaluated-commits`)
 - `--repo <path>` - Git repository path (default: current directory)
 - `--format <format>` - Output format: `json`, `html`, `markdown` (default: all)
@@ -168,6 +194,7 @@ codewave evaluate <commit-hash> [options]
 - `--model <model>` - Override configured LLM model
 
 **Example:**
+
 ```bash
 codewave evaluate HEAD -o ./reports --verbose
 codewave evaluate abc1234 --format json --output ./data
@@ -182,6 +209,7 @@ codewave batch-evaluate [options]
 ```
 
 **Options:**
+
 - `--count <number>` - Number of commits to evaluate (default: 10)
 - `--since <date>` - Start date (ISO format or natural language)
 - `--until <date>` - End date (ISO format or natural language)
@@ -192,6 +220,7 @@ codewave batch-evaluate [options]
 - `--verbose` - Enable verbose logging
 
 **Examples:**
+
 ```bash
 codewave batch-evaluate --count 20
 codewave batch-evaluate --since "2024-01-01" --until "2024-01-31"
@@ -207,12 +236,14 @@ codewave config [command]
 ```
 
 **Commands:**
+
 - `codewave config` - Interactive setup wizard
 - `codewave config show` - Display current configuration
 - `codewave config set <key> <value>` - Set specific configuration value
 - `codewave config reset` - Reset to defaults
 
 **Examples:**
+
 ```bash
 codewave config
 codewave config show
@@ -278,41 +309,48 @@ codewave evaluate HEAD
 CodeWave evaluates commits across 7 carefully chosen dimensions, with each pillar assigned to a specialized AI agent:
 
 ### Pillar 1: Code Quality (1-10)
+
 **Agent**: Developer Reviewer
 **Description**: Evaluates code correctness, design patterns, adherence to best practices, readability, and potential bugs.
 **Weights**: Critical for production quality and maintainability.
 
 ### Pillar 2: Code Complexity (10-1, Inverted)
+
 **Agent**: Senior Architect
 **Description**: Measures cyclomatic complexity, cognitive complexity, maintainability. Higher score = Lower complexity.
 **Scale**: 10 (simple) to 1 (very complex)
 **Weights**: Critical for long-term maintenance and team velocity.
 
 ### Pillar 3: Ideal Time Hours (Estimate)
+
 **Agent**: Business Analyst
 **Description**: Estimates ideal development time under optimal conditions (clear requirements, no interruptions).
 **Scale**: Hours (0.5 to 80)
 **Weights**: Baseline for productivity metrics.
 
 ### Pillar 4: Actual Time Hours (Estimate)
+
 **Agent**: Developer Author
 **Description**: Actual time taken to implement (including research, debugging, iterations).
 **Scale**: Hours (0.5 to 160)
 **Weights**: Identifies scope creep and process inefficiencies.
 
 ### Pillar 5: Technical Debt Hours (+/-)
+
 **Agent**: Senior Architect
 **Description**: Positive = Additional debt introduced; Negative = Debt reduced/eliminated.
 **Scale**: Hours (+/- 0 to 40)
 **Weights**: Critical for assessing long-term codebase health.
 
 ### Pillar 6: Functional Impact (1-10)
+
 **Agent**: Business Analyst
 **Description**: User-facing impact, business value, feature completeness, and alignment with requirements.
 **Scale**: 1 (no impact) to 10 (transformative)
 **Weights**: Aligns engineering efforts with business goals.
 
 ### Pillar 7: Test Coverage (1-10)
+
 **Agent**: QA Engineer
 **Description**: Comprehensiveness of tests: unit, integration, edge cases, error scenarios.
 **Scale**: 1 (no tests) to 10 (comprehensive coverage)
@@ -323,45 +361,55 @@ CodeWave evaluates commits across 7 carefully chosen dimensions, with each pilla
 ## The 5 AI Agents
 
 ### 1. Business Analyst (🎯)
+
 **Role**: Strategic stakeholder representing business value and user impact.
 **Metrics**: Ideal Time Hours, Functional Impact
 **Responsibilities**:
+
 - Assess business value and feature completeness
 - Estimate ideal development time
 - Evaluate functional impact on users
 - Consider market alignment and competitive advantage
 
 ### 2. Developer Author (👨‍💻)
+
 **Role**: Original implementation owner providing implementation insights.
 **Metrics**: Actual Time Hours
 **Responsibilities**:
+
 - Report actual development time
 - Explain implementation decisions
 - Discuss challenges and blockers encountered
 - Provide context for complexity and time variance
 
 ### 3. Developer Reviewer (🔍)
+
 **Role**: Code quality auditor ensuring production readiness.
 **Metrics**: Code Quality
 **Responsibilities**:
+
 - Evaluate code correctness and design patterns
 - Identify potential bugs and security issues
 - Assess readability and maintainability
 - Recommend refactoring opportunities
 
 ### 4. Senior Architect (🏛️)
+
 **Role**: Technical leader focused on scalability, design, and debt.
 **Metrics**: Code Complexity, Technical Debt Hours
 **Responsibilities**:
+
 - Assess architectural decisions and scalability
 - Measure code complexity and maintainability
 - Estimate technical debt introduced or reduced
 - Recommend long-term improvements
 
 ### 5. QA Engineer (🧪)
+
 **Role**: Quality assurance specialist ensuring reliability.
 **Metrics**: Test Coverage
 **Responsibilities**:
+
 - Evaluate test coverage and comprehensiveness
 - Identify untested edge cases and error scenarios
 - Assess reliability and resilience
@@ -374,18 +422,21 @@ CodeWave evaluates commits across 7 carefully chosen dimensions, with each pilla
 CodeWave's evaluation happens across 3 structured rounds:
 
 ### Round 1: Initial Assessment
+
 Each agent independently evaluates the commit against their pillar metrics, providing initial scores and reasoning.
 
 **Duration**: ~30-60 seconds
 **Output**: Initial scores, concerns, and observations
 
 ### Round 2: Concerns & Cross-Examination
+
 Agents present their concerns and challenge each other's assumptions. This creates a realistic discussion where different perspectives can influence thinking.
 
 **Duration**: ~30-90 seconds
 **Output**: Refined perspectives, acknowledged concerns, potential consensus areas
 
 ### Round 3: Validation & Agreement
+
 Agents finalize their positions, considering all previous inputs. Final scores are calculated with a weighted consensus algorithm.
 
 **Duration**: ~20-60 seconds
@@ -400,6 +451,7 @@ Every evaluation begins with an **AI-generated Developer Overview** - a concise,
 ### What's Included
 
 The Developer Overview contains:
+
 - **Summary**: One-line executive summary of the change (max 150 chars)
 - **Details**: Paragraph explaining key changes and context (max 400 chars)
 - **Key Changes**: Bullet list of implementation details
@@ -428,6 +480,7 @@ Key Changes:
 ### Why It Matters
 
 The Developer Overview provides:
+
 - **Quick Context**: Understand the change without reading the full diff
 - **Consistency**: Same summary regardless of agent disagreement
 - **CI/CD Integration**: Programmatic access to change summary
@@ -442,12 +495,14 @@ For detailed information about Developer Overview generation, convergence detect
 ### Retrieval-Augmented Generation (RAG) for Large Diffs
 
 When commits exceed 100KB (configurable):
+
 1. Diff is chunked into semantic segments
 2. Vector embeddings generated for each chunk
 3. Agents query most relevant chunks instead of processing entire diff
 4. Reduces tokens used and speeds up evaluation
 
 **Configuration**:
+
 ```bash
 codewave config set enable-rag true
 codewave config set rag-chunk-size 2000
@@ -459,21 +514,25 @@ codewave config set rag-threshold 102400
 Choose your LLM provider based on your needs:
 
 **Anthropic Claude**
+
 - Best for code analysis and reasoning
 - Models: claude-3-5-sonnet-20241022, claude-3-opus-20250219
 - Recommended: Default choice for optimal results
 
 **OpenAI GPT**
+
 - Excellent multi-agent reasoning
 - Models: gpt-4o, gpt-4-turbo, gpt-4
 - Note: May have rate limits for batch processing
 
 **Google Gemini**
+
 - Cost-effective option
 - Models: gemini-2.0-flash, gemini-1.5-pro
 - Good for high-volume batch processing
 
 **Example**: Switch to OpenAI
+
 ```bash
 codewave config set llm-provider openai
 codewave config set model gpt-4o
@@ -489,6 +548,7 @@ codewave batch-evaluate --count 100 --verbose
 ```
 
 **Progress Display**:
+
 - Overall completion percentage
 - Current commit being evaluated
 - Elapsed time and ETA
@@ -505,6 +565,7 @@ codewave evaluate HEAD --format json
 ```
 
 **Use cases**:
+
 - Integrate with CI/CD pipelines
 - Custom reporting and dashboards
 - Machine learning on evaluation metrics
@@ -521,6 +582,7 @@ codewave batch-evaluate --count 5 --verbose
 ```
 
 **Output**:
+
 ```
 CodeWave - Commit Intelligence Engine
 ================================
@@ -616,23 +678,27 @@ codewave/
 We welcome contributions! Please follow these guidelines:
 
 1. **Fork and Clone**
+
    ```bash
    git clone <your-fork>
    cd codewave
    ```
 
 2. **Create Feature Branch**
+
    ```bash
    git checkout -b feature/your-feature
    ```
 
 3. **Make Changes and Test**
+
    ```bash
    npm run build
    npm test
    ```
 
 4. **Ensure Code Quality**
+
    ```bash
    npm run lint
    npm run prettier
@@ -650,12 +716,14 @@ We welcome contributions! Please follow these guidelines:
 ### Common Issues
 
 **Q: "API Key not found" error**
+
 ```
 A: Run 'codewave config' to set up your LLM provider credentials.
    Alternatively, set CODEWAVE_API_KEY environment variable.
 ```
 
 **Q: Evaluation times out**
+
 ```
 A: For large commits (>100KB), enable RAG:
    codewave config set enable-rag true
@@ -663,6 +731,7 @@ A: For large commits (>100KB), enable RAG:
 ```
 
 **Q: "Too many requests" error from LLM provider**
+
 ```
 A: Reduce parallel evaluations:
    codewave batch-evaluate --parallel 2
@@ -670,6 +739,7 @@ A: Reduce parallel evaluations:
 ```
 
 **Q: Results directory growing too large**
+
 ```
 A: Archive old evaluations:
    find .evaluated-commits -type f -mtime +30 -delete
@@ -678,6 +748,7 @@ A: Archive old evaluations:
 ```
 
 **Q: Memory issues during batch processing**
+
 ```
 A: Reduce batch size and parallel count:
    codewave batch-evaluate --count 10 --parallel 1
@@ -690,18 +761,21 @@ See [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) for more detailed solutions.
 ## Performance Considerations
 
 ### Evaluation Time
+
 - **Average**: 2-4 seconds per commit
 - **Small commits** (<1KB): 1-2 seconds
 - **Medium commits** (1-100KB): 2-5 seconds
 - **Large commits** (>100KB with RAG): 3-8 seconds
 
 ### Token Usage
+
 - **Average**: 3,000-5,000 tokens per evaluation
 - **Small commits**: 2,000-3,000 tokens
 - **Complex commits**: 4,000-6,000 tokens
 - **RAG-assisted**: 2,500-4,000 tokens (saved via chunking)
 
 ### Cost Estimates (using Claude 3.5 Sonnet)
+
 - **Single evaluation**: ~$0.015-0.030
 - **100 commits**: ~$1.50-3.00
 - **1,000 commits**: ~$15-30
@@ -748,6 +822,7 @@ MIT License - see [LICENSE](./LICENSE) file for details.
 ## Acknowledgments
 
 Built with ❤️ by the TechDebtGPT team using:
+
 - [LangChain](https://www.langchain.com/) - AI/LLM orchestration
 - [LangGraph](https://www.langchain.com/langgraph) - Workflow state machines
 - [Commander.js](https://github.com/tj/commander.js) - CLI framework

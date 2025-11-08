@@ -1,31 +1,31 @@
 export interface EvaluationOutput {
-    agent: string;
-    summary: string;
-    details?: string;
-    metrics?: Record<string, any>;
+  agent: string;
+  summary: string;
+  details?: string;
+  metrics?: Record<string, any>;
 }
 
 /**
  * Token usage snapshot for a specific evaluation
  */
 export interface TokenSnapshot {
-    inputTokens: number;
-    outputTokens: number;
-    totalTokens: number;
-    totalCost: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  totalCost: number;
 }
 
 /**
  * Metrics snapshot for a specific evaluation
  */
 export interface MetricsSnapshot {
-    functionalImpact: number;
-    idealTimeHours: number;
-    testCoverage: number;
-    codeQuality: number;
-    codeComplexity: number;
-    actualTimeHours: number;
-    technicalDebtHours: number;
+  functionalImpact: number;
+  idealTimeHours: number;
+  testCoverage: number;
+  codeQuality: number;
+  codeComplexity: number;
+  actualTimeHours: number;
+  technicalDebtHours: number;
 }
 
 /**
@@ -33,12 +33,12 @@ export interface MetricsSnapshot {
  * Stores all important metrics from a re-evaluation
  */
 export interface EvaluationHistoryEntry {
-    timestamp: string;
-    source: string;
-    evaluationNumber: number;
-    metrics: MetricsSnapshot;
-    tokens: TokenSnapshot;
-    convergenceScore: number;
+  timestamp: string;
+  source: string;
+  evaluationNumber: number;
+  metrics: MetricsSnapshot;
+  tokens: TokenSnapshot;
+  convergenceScore: number;
 }
 
 /**

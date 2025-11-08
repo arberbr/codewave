@@ -25,6 +25,7 @@ codewave config
 Follow the interactive wizard:
 
 1. **Choose LLM Provider**
+
    ```
    ? Which LLM provider do you want to use?
    ❯ Anthropic Claude (recommended)
@@ -33,11 +34,13 @@ Follow the interactive wizard:
    ```
 
 2. **Enter API Key**
+
    ```
    ? Enter your Anthropic API key: sk-ant-...
    ```
 
 3. **Choose Model**
+
    ```
    ? Which Claude model do you want to use?
    ❯ claude-haiku-4-5-20251001 (recommended - cost-optimized)
@@ -78,6 +81,7 @@ codewave config show
 ```
 
 Displays all current settings:
+
 ```
 CodeWave Configuration
 =====================
@@ -98,6 +102,7 @@ codewave config set <key> <value>
 ```
 
 **Examples:**
+
 ```bash
 # Change model
 codewave config set model claude-3-opus-20250219
@@ -138,6 +143,7 @@ codewave evaluate HEAD
 ### Core LLM Settings
 
 #### `llmProvider`
+
 **Type**: `'anthropic' | 'openai' | 'google' | 'xai'`
 **Default**: `'anthropic'`
 **Env**: `CODEWAVE_LLM_PROVIDER`
@@ -145,6 +151,7 @@ codewave evaluate HEAD
 LLM provider to use for agent conversations.
 
 **Supported Providers:**
+
 - `anthropic` - Recommended (Haiku 4.5 is most cost-effective)
 - `openai` - Alternative with GPT-4o models
 - `google` - Gemini models for advanced reasoning
@@ -156,27 +163,32 @@ codewave config set llm-provider google
 ```
 
 #### `model`
+
 **Type**: `string`
 **Default**: `'claude-haiku-4-5-20251001'`
 **Env**: `CODEWAVE_MODEL`
 
 **Available Anthropic Models:**
+
 - `claude-haiku-4-5-20251001` - Cost-optimized (Recommended)
 - `claude-sonnet-4-5-20250929` - Best balance
 - `claude-opus-4-1-20250805` - Maximum quality
 
 **Available OpenAI Models:**
+
 - `gpt-4o-mini` - Cost-optimized (Recommended)
 - `gpt-4o` - Best balance
 - `o3-mini-2025-01-31` - Advanced reasoning, cost-efficient
 - `o3` - Maximum reasoning capability
 
 **Available Google Models:**
+
 - `gemini-2.5-flash-lite` - Most efficient (Recommended)
 - `gemini-2.5-flash` - Best balance
 - `gemini-2.5-pro` - Best reasoning
 
 **Available xAI Models:**
+
 - `grok-4-fast-non-reasoning` - Cost-optimized (Recommended)
 - `grok-4.2` - Polished version
 - `grok-4-0709` - Advanced reasoning
@@ -195,6 +207,7 @@ codewave config set model gemini-2.0-flash
 ```
 
 #### `apiKey`
+
 **Type**: `string`
 **Env**: `CODEWAVE_API_KEY`
 
@@ -205,12 +218,14 @@ codewave config set api-key sk-ant-...
 ```
 
 **Security Note**: Configuration is stored in:
+
 - **macOS/Linux**: `~/.codewave/config.json`
 - **Windows**: `%APPDATA%\codewave\config.json`
 
 The configuration file is user-readable. Store sensitive keys in environment variables when possible.
 
 #### `apiBaseUrl`
+
 **Type**: `string | null`
 **Default**: `null`
 **Env**: `CODEWAVE_API_BASE_URL`
@@ -224,6 +239,7 @@ codewave config set api-base-url https://proxy.company.com/api
 ### Output Settings
 
 #### `outputDirectory`
+
 **Type**: `string`
 **Default**: `.evaluated-commits`
 **Env**: `CODEWAVE_OUTPUT_DIR`
@@ -235,6 +251,7 @@ codewave config set output-directory ./reports
 ```
 
 #### `reportFormat`
+
 **Type**: `'html' | 'json' | 'markdown' | 'all'`
 **Default**: `'all'`
 **Env**: `CODEWAVE_REPORT_FORMAT`
@@ -255,6 +272,7 @@ codewave config set report-format all
 ### Token & Cost Management
 
 #### `maxTokensPerRequest`
+
 **Type**: `number`
 **Default**: `4000`
 **Env**: `CODEWAVE_MAX_TOKENS`
@@ -266,6 +284,7 @@ codewave config set max-tokens 8000
 ```
 
 #### `defaultBatchSize`
+
 **Type**: `number`
 **Default**: `10`
 **Env**: `CODEWAVE_BATCH_SIZE`
@@ -277,6 +296,7 @@ codewave config set batch-size 50
 ```
 
 #### `parallelEvaluations`
+
 **Type**: `number`
 **Default**: `3`
 **Min**: `1`
@@ -292,6 +312,7 @@ codewave config set parallel-evaluations 5
 ### RAG Settings
 
 #### `enableRag`
+
 **Type**: `boolean`
 **Default**: `true`
 **Env**: `CODEWAVE_ENABLE_RAG`
@@ -303,6 +324,7 @@ codewave config set enable-rag true
 ```
 
 #### `ragChunkSize`
+
 **Type**: `number`
 **Default**: `2000`
 **Env**: `CODEWAVE_RAG_CHUNK_SIZE`
@@ -314,6 +336,7 @@ codewave config set rag-chunk-size 3000
 ```
 
 #### `ragThreshold`
+
 **Type**: `number`
 **Default**: `102400`
 **Env**: `CODEWAVE_RAG_THRESHOLD`
@@ -326,6 +349,7 @@ codewave config set rag-threshold 51200
 ```
 
 #### `vectorStoreType`
+
 **Type**: `'memory' | 'disk'`
 **Default**: `'memory'`
 **Env**: `CODEWAVE_VECTOR_STORE_TYPE`
@@ -339,6 +363,7 @@ codewave config set vector-store-type memory
 ### Logging & Debug
 
 #### `verbose`
+
 **Type**: `boolean`
 **Default**: `false`
 **Env**: `CODEWAVE_VERBOSE`
@@ -350,6 +375,7 @@ codewave config set verbose true
 ```
 
 **Debug Output Includes**:
+
 - Agent prompts and responses
 - Token counts and costs
 - LLM API interactions
@@ -507,6 +533,7 @@ codewave config set parallel-evaluations 3
 The HTML report displays which LLM model was used for each evaluation:
 
 **In HTML Report:**
+
 - Look at the top of the "Evaluation History" tab header
 - Shows format: `🤖 provider/model` (e.g., `🤖 openai/gpt-4o-mini`)
 - Helps track which model generated each evaluation
@@ -514,16 +541,19 @@ The HTML report displays which LLM model was used for each evaluation:
 ### Switching Models
 
 **Change Default Model:**
+
 ```bash
 codewave config set model claude-sonnet-4-5-20250929
 ```
 
 **Override for Single Evaluation:**
+
 ```bash
 codewave evaluate HEAD --model gpt-4o-mini
 ```
 
 **Switch to Different Provider:**
+
 ```bash
 # Switch to OpenAI
 codewave config set llm-provider openai
@@ -536,14 +566,14 @@ codewave config set llm-provider anthropic
 
 ### Model Performance Comparison
 
-| Model | Provider | Speed | Quality | Cost | Best For |
-|-------|----------|-------|---------|------|----------|
-| Haiku 4.5 | Anthropic | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ | Budget-conscious, large batches |
-| Sonnet 4.5 | Anthropic | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | Balanced (recommended) |
-| Opus 4.1 | Anthropic | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | Maximum accuracy |
-| GPT-4o-mini | OpenAI | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | Cost-effective alternative |
-| GPT-4o | OpenAI | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | High quality |
-| Gemini 2.0 Flash | Google | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Most cost-effective |
+| Model            | Provider  | Speed    | Quality    | Cost       | Best For                        |
+| ---------------- | --------- | -------- | ---------- | ---------- | ------------------------------- |
+| Haiku 4.5        | Anthropic | ⭐⭐⭐⭐ | ⭐⭐       | ⭐⭐⭐⭐   | Budget-conscious, large batches |
+| Sonnet 4.5       | Anthropic | ⭐⭐⭐   | ⭐⭐⭐⭐   | ⭐⭐⭐     | Balanced (recommended)          |
+| Opus 4.1         | Anthropic | ⭐⭐     | ⭐⭐⭐⭐⭐ | ⭐⭐       | Maximum accuracy                |
+| GPT-4o-mini      | OpenAI    | ⭐⭐⭐   | ⭐⭐⭐     | ⭐⭐⭐⭐   | Cost-effective alternative      |
+| GPT-4o           | OpenAI    | ⭐⭐⭐   | ⭐⭐⭐⭐   | ⭐⭐       | High quality                    |
+| Gemini 2.0 Flash | Google    | ⭐⭐⭐⭐ | ⭐⭐⭐     | ⭐⭐⭐⭐⭐ | Most cost-effective             |
 
 ---
 
@@ -554,11 +584,13 @@ codewave config set llm-provider anthropic
 Every evaluation displays token information:
 
 **In HTML Report:**
+
 - Check the "Evaluation History" tab
 - Shows: Input Tokens + Output Tokens = Total Tokens
 - See cumulative cost for all evaluations
 
 **In results.json:**
+
 ```json
 {
   "tokenUsage": {
@@ -594,6 +626,7 @@ Opus 4.1:         $0.10-0.50    (most expensive)
 ### Tracking Total Costs
 
 **Extract cost from all evaluations:**
+
 ```bash
 # Sum costs from all evaluations
 jq -s '[.[].totalCost] | add' .evaluated-commits/*/results.json
@@ -607,6 +640,7 @@ done
 ```
 
 **Track monthly spending:**
+
 ```bash
 # Get all costs from current month
 jq -r 'select(.timestamp | startswith("2025-11")) | .totalCost' \
@@ -617,12 +651,14 @@ jq -r 'select(.timestamp | startswith("2025-11")) | .totalCost' \
 ### Cost Optimization
 
 **Reduce Costs:**
+
 1. **Use cheaper model**: Haiku is 6x cheaper than Sonnet
 2. **Reduce parallelization**: Fewer simultaneous evaluations
 3. **Increase batch size**: More commits per run
 4. **Enable RAG**: Reduces tokens for large diffs
 
 **Example: Optimize for Budget**
+
 ```bash
 codewave config set model claude-haiku-4-5-20251001
 codewave config set llm-provider google  # Or Gemini for cheaper
@@ -630,6 +666,7 @@ codewave batch-evaluate --count 100 --parallel 2
 ```
 
 **Example: Optimize for Quality**
+
 ```bash
 codewave config set model claude-opus-4-1-20250805
 codewave batch-evaluate --count 10 --parallel 5
@@ -638,6 +675,7 @@ codewave batch-evaluate --count 10 --parallel 5
 ### Setting Budget Alerts
 
 **Monitor spending with alerts:**
+
 ```bash
 #!/bin/bash
 # alert-on-cost.sh
@@ -689,6 +727,7 @@ codewave evaluate HEAD
 ```
 
 **Priority Order**:
+
 1. Environment variables (highest)
 2. CLI arguments
 3. Configuration file
@@ -699,6 +738,7 @@ codewave evaluate HEAD
 ## Configuration File Format
 
 Located at:
+
 - **macOS/Linux**: `~/.codewave/config.json`
 - **Windows**: `%APPDATA%\codewave\config.json`
 
@@ -742,6 +782,7 @@ cp ~/.codewave/config.json.backup ~/.codewave/config.json
 ### "API Key not found"
 
 **Solution**:
+
 ```bash
 # Run config setup
 codewave config
@@ -754,6 +795,7 @@ codewave evaluate HEAD
 ### "Invalid API key"
 
 **Solution**:
+
 1. Verify key in configuration: `codewave config show`
 2. Check key is still valid on provider website
 3. Regenerate key if needed
@@ -762,6 +804,7 @@ codewave evaluate HEAD
 ### "Rate limit exceeded"
 
 **Solution**:
+
 ```bash
 # Reduce parallelization
 codewave config set parallel-evaluations 1
@@ -773,6 +816,7 @@ codewave batch-evaluate --count 50 --parallel 1
 ### "Out of memory during batch processing"
 
 **Solution**:
+
 ```bash
 # Reduce parallelization
 codewave config set parallel-evaluations 1
@@ -787,6 +831,7 @@ codewave batch-evaluate --count 20
 ### "Evaluations timing out"
 
 **Solution**:
+
 ```bash
 # Enable RAG for large diffs
 codewave config set enable-rag true
@@ -801,6 +846,7 @@ codewave config set model claude-3-haiku-20240307
 ### "Configuration file corrupted"
 
 **Solution**:
+
 ```bash
 # Reset and reconfigure
 codewave config reset
@@ -808,6 +854,7 @@ codewave config
 ```
 
 Or manually fix the JSON:
+
 ```bash
 # Edit directly
 cat ~/.codewave/config.json  # Inspect
@@ -870,6 +917,7 @@ codewave batch-evaluate --parallel 5 --count 100
 ---
 
 For more information:
+
 - [README.md](../README.md) - Main documentation
 - [API.md](./API.md) - Programmatic API
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture

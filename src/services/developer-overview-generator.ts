@@ -9,55 +9,49 @@ import { AppConfig } from '../config/config.interface';
 import { LLMService } from '../llm/llm-service';
 
 export class DeveloperOverviewGenerator {
-    private config: AppConfig;
+  private config: AppConfig;
 
-    constructor(config: AppConfig) {
-        this.config = config;
-    }
+  constructor(config: AppConfig) {
+    this.config = config;
+  }
 
-    /**
-     * Generate developer overview from commit diff
-     * Returns a structured summary of what changed and why
-     */
-    async generateOverview(
-        commitDiff: string,
-        filesChanged: string[],
-        commitMessage?: string,
-    ): Promise<DeveloperOverview> {
-        // Build the prompt
-        const prompt = this.buildPrompt(commitDiff, filesChanged, commitMessage);
+  /**
+   * Generate developer overview from commit diff
+   * Returns a structured summary of what changed and why
+   */
+  async generateOverview(
+    commitDiff: string,
+    filesChanged: string[],
+    commitMessage?: string
+  ): Promise<DeveloperOverview> {
+    // Build the prompt
+    const prompt = this.buildPrompt(commitDiff, filesChanged, commitMessage);
 
-        // Get the configured LLM model (reuses same provider/config as agents)
-        // Override maxTokens to 500 for concise developer overview
-        const config = { ...this.config };
-        config.llm = { ...config.llm, maxTokens: 500 };
-        const model = LLMService.getChatModel(config);
+    // Get the configured LLM model (reuses same provider/config as agents)
+    // Override maxTokens to 500 for concise developer overview
+    const config = { ...this.config };
+    config.llm = { ...config.llm, maxTokens: 500 };
+    const model = LLMService.getChatModel(config);
 
-        // Invoke the model using LangChain's standardized interface
-        const result = await model.invoke([
-            {
-                role: 'user',
-                content: prompt,
-            },
-        ]);
+    // Invoke the model using LangChain's standardized interface
+    const result = await model.invoke([
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ]);
 
-        const responseText = typeof result.content === 'string'
-            ? result.content
-            : '';
+    const responseText = typeof result.content === 'string' ? result.content : '';
 
-        // Parse the structured response
-        return this.parseResponse(responseText);
-    }
+    // Parse the structured response
+    return this.parseResponse(responseText);
+  }
 
-    /**
-     * Build prompt for Claude to generate overview
-     */
-    private buildPrompt(
-        commitDiff: string,
-        filesChanged: string[],
-        commitMessage?: string,
-    ): string {
-        return `You are analyzing a commit to generate a structured overview for a code review team.
+  /**
+   * Build prompt for Claude to generate overview
+   */
+  private buildPrompt(commitDiff: string, filesChanged: string[], commitMessage?: string): string {
+    return `You are analyzing a commit to generate a structured overview for a code review team.
 Your response MUST be valid JSON with NO additional text.
 Keep your response under 400 tokens.
 
@@ -82,83 +76,80 @@ CRITICAL INSTRUCTIONS:
 3. Return the complete JSON object with all 4 fields
 4. If parsing would exceed token limit, truncate descriptions
 5. Do not include newlines in string values (use spaces instead)`;
-    }
+  }
 
-    /**
-     * Parse Claude's response into DeveloperOverview
-     * Uses robust brace-counting to handle truncation and markdown-wrapped JSON
-     */
-    private parseResponse(responseText: string): DeveloperOverview {
-        try {
-            let cleaned = responseText.trim();
+  /**
+   * Parse Claude's response into DeveloperOverview
+   * Uses robust brace-counting to handle truncation and markdown-wrapped JSON
+   */
+  private parseResponse(responseText: string): DeveloperOverview {
+    try {
+      let cleaned = responseText.trim();
 
-            // Remove markdown code fences if present
-            cleaned = cleaned.replace(/^```(?:json|javascript)?\s*\n?/i, '');
-            cleaned = cleaned.replace(/\n?```\s*$/i, '');
-            cleaned = cleaned.trim();
+      // Remove markdown code fences if present
+      cleaned = cleaned.replace(/^```(?:json|javascript)?\s*\n?/i, '');
+      cleaned = cleaned.replace(/\n?```\s*$/i, '');
+      cleaned = cleaned.trim();
 
-            // Find JSON start
-            const jsonStart = cleaned.indexOf('{');
-            if (jsonStart === -1) {
-                throw new Error('No JSON object found in output');
-            }
+      // Find JSON start
+      const jsonStart = cleaned.indexOf('{');
+      if (jsonStart === -1) {
+        throw new Error('No JSON object found in output');
+      }
 
-            // Count braces to find balanced JSON object
-            let braceCount = 0;
-            let jsonEnd = -1;
+      // Count braces to find balanced JSON object
+      let braceCount = 0;
+      let jsonEnd = -1;
 
-            for (let i = jsonStart; i < cleaned.length; i++) {
-                if (cleaned[i] === '{') {
-                    braceCount++;
-                } else if (cleaned[i] === '}') {
-                    braceCount--;
-                    if (braceCount === 0) {
-                        jsonEnd = i;
-                        break;
-                    }
-                }
-            }
-
-            if (jsonEnd === -1) {
-                throw new Error('Incomplete JSON object - unmatched braces');
-            }
-
-            // Extract balanced JSON portion only
-            const jsonStr = cleaned.substring(jsonStart, jsonEnd + 1);
-            const parsed = JSON.parse(jsonStr);
-
-            return {
-                summary: parsed.summary || 'Changes to the codebase',
-                description:
-                    parsed.description ||
-                    'No detailed description available',
-                keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
-                testingApproach:
-                    parsed.testingApproach || 'Not specified',
-                generatedAt: new Date().toISOString(),
-            };
-        } catch (error) {
-            console.warn(
-                `Failed to parse developer overview response: ${error instanceof Error ? error.message : String(error)}`,
-            );
-            console.warn(`Raw response (first 300 chars): ${responseText.substring(0, 300)}`);
-
-            // Return a basic overview as fallback
-            return {
-                summary: 'Code changes',
-                description: responseText.substring(0, 500),
-                keyPoints: [],
-                testingApproach: 'Not specified',
-                generatedAt: new Date().toISOString(),
-            };
+      for (let i = jsonStart; i < cleaned.length; i++) {
+        if (cleaned[i] === '{') {
+          braceCount++;
+        } else if (cleaned[i] === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            jsonEnd = i;
+            break;
+          }
         }
-    }
+      }
 
-    /**
-     * Format overview as a readable string for agent prompts
-     */
-    static formatForPrompt(overview: DeveloperOverview): string {
-        return `## Developer Overview
+      if (jsonEnd === -1) {
+        throw new Error('Incomplete JSON object - unmatched braces');
+      }
+
+      // Extract balanced JSON portion only
+      const jsonStr = cleaned.substring(jsonStart, jsonEnd + 1);
+      const parsed = JSON.parse(jsonStr);
+
+      return {
+        summary: parsed.summary || 'Changes to the codebase',
+        description: parsed.description || 'No detailed description available',
+        keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
+        testingApproach: parsed.testingApproach || 'Not specified',
+        generatedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.warn(
+        `Failed to parse developer overview response: ${error instanceof Error ? error.message : String(error)}`
+      );
+      console.warn(`Raw response (first 300 chars): ${responseText.substring(0, 300)}`);
+
+      // Return a basic overview as fallback
+      return {
+        summary: 'Code changes',
+        description: responseText.substring(0, 500),
+        keyPoints: [],
+        testingApproach: 'Not specified',
+        generatedAt: new Date().toISOString(),
+      };
+    }
+  }
+
+  /**
+   * Format overview as a readable string for agent prompts
+   */
+  static formatForPrompt(overview: DeveloperOverview): string {
+    return `## Developer Overview
 
 **Summary:** ${overview.summary}
 
@@ -166,9 +157,9 @@ CRITICAL INSTRUCTIONS:
 ${overview.description}
 
 **Key Changes:**
-${overview.keyPoints.map(p => `- ${p}`).join('\n')}
+${overview.keyPoints.map((p) => `- ${p}`).join('\n')}
 
 **Testing Approach:**
 ${overview.testingApproach}`;
-    }
+  }
 }

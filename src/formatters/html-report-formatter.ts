@@ -33,44 +33,54 @@ export function generateHtmlReport(
     const combined = summary + ' ' + details;
 
     // Business Analyst patterns
-    if (combined.includes('business analyst') ||
+    if (
+      combined.includes('business analyst') ||
       combined.includes('functional impact') ||
       combined.includes('business value') ||
-      combined.includes('ideal time')) {
+      combined.includes('ideal time')
+    ) {
       return 'Business Analyst';
     }
 
     // QA Engineer patterns
-    if (combined.includes('qa engineer') ||
+    if (
+      combined.includes('qa engineer') ||
       combined.includes('test coverage') ||
       combined.includes('quality assurance') ||
-      combined.includes('testing')) {
+      combined.includes('testing')
+    ) {
       return 'QA Engineer';
     }
 
     // Developer (Author) patterns
-    if (combined.includes('developer (author)') ||
+    if (
+      combined.includes('developer (author)') ||
       combined.includes('actual time') ||
       combined.includes('implementation approach') ||
-      combined.includes('spent about')) {
+      combined.includes('spent about')
+    ) {
       return 'Developer (Author)';
     }
 
     // Senior Architect patterns
-    if (combined.includes('senior architect') ||
+    if (
+      combined.includes('senior architect') ||
       combined.includes('architect') ||
       combined.includes('code complexity') ||
       combined.includes('technical debt') ||
-      combined.includes('architectural')) {
+      combined.includes('architectural')
+    ) {
       return 'Senior Architect';
     }
 
     // Developer Reviewer patterns
-    if (combined.includes('developer reviewer') ||
+    if (
+      combined.includes('developer reviewer') ||
       combined.includes('code reviewer') ||
       combined.includes('code quality') ||
       combined.includes('refactoring') ||
-      combined.includes('looking at the code')) {
+      combined.includes('looking at the code')
+    ) {
       return 'Developer Reviewer';
     }
 
@@ -78,36 +88,37 @@ export function generateHtmlReport(
   };
 
   // Generate agent discussion cards
-  const agentCardsHtml = discussionAgents.map((agent, idx) => {
-    const agentName = detectAgentName(agent, idx);
-    const iconMap: Record<string, string> = {
-      'Business Analyst': '👔',
-      'QA Engineer': '🧪',
-      'Developer (Author)': '',
-      'Senior Architect': '🏛️',
-      'Developer Reviewer': '👨‍💻',
-    };
-    const icon = iconMap[agentName] || '🤖';
-    const colorMap: Record<string, string> = {
-      'Business Analyst': 'info',
-      'QA Engineer': 'warning',
-      'Developer (Author)': 'success',
-      'Senior Architect': 'primary',
-      'Developer Reviewer': 'secondary',
-    };
-    const color = colorMap[agentName] || 'secondary';
+  const agentCardsHtml = discussionAgents
+    .map((agent, idx) => {
+      const agentName = detectAgentName(agent, idx);
+      const iconMap: Record<string, string> = {
+        'Business Analyst': '👔',
+        'QA Engineer': '🧪',
+        'Developer (Author)': '',
+        'Senior Architect': '🏛️',
+        'Developer Reviewer': '👨‍💻',
+      };
+      const icon = iconMap[agentName] || '🤖';
+      const colorMap: Record<string, string> = {
+        'Business Analyst': 'info',
+        'QA Engineer': 'warning',
+        'Developer (Author)': 'success',
+        'Senior Architect': 'primary',
+        'Developer Reviewer': 'secondary',
+      };
+      const color = colorMap[agentName] || 'secondary';
 
-    const summary = agent.summary || 'No summary provided';
-    const details = agent.details || 'No details provided';
+      const summary = agent.summary || 'No summary provided';
+      const details = agent.details || 'No details provided';
 
-    // Format details with proper line breaks and markdown-like formatting
-    const formattedDetails = details
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
-      .replace(/\n/g, '<br>') // Line breaks
-      .replace(/^(\d+\.\s)/gm, '<br>$1'); // Numbered lists
+      // Format details with proper line breaks and markdown-like formatting
+      const formattedDetails = details
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+        .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
+        .replace(/\n/g, '<br>') // Line breaks
+        .replace(/^(\d+\.\s)/gm, '<br>$1'); // Numbered lists
 
-    return `
+      return `
       <div class="card mb-4 shadow-sm border-${color}">
         <div class="card-header bg-${color} text-white">
           <h5 class="mb-0">
@@ -124,11 +135,12 @@ export function generateHtmlReport(
         </div>
       </div>
     `;
-  }).join('\n');
+    })
+    .join('\n');
 
   // Aggregate all metrics from all agents
   const allMetrics: Record<string, number> = {};
-  discussionAgents.forEach(agent => {
+  discussionAgents.forEach((agent) => {
     if (agent.metrics) {
       Object.assign(allMetrics, agent.metrics);
     }
@@ -141,16 +153,18 @@ export function generateHtmlReport(
       .map(([key, value]) => {
         const label = key
           .replace(/([A-Z])/g, ' $1')
-          .replace(/^./, str => str.toUpperCase())
+          .replace(/^./, (str) => str.toUpperCase())
           .trim();
 
         // Color code metrics based on value
         let badge = 'secondary';
         if (typeof value === 'number') {
           // Standard scales (higher is better)
-          if (key.toLowerCase().includes('quality') ||
+          if (
+            key.toLowerCase().includes('quality') ||
             key.toLowerCase().includes('coverage') ||
-            key.toLowerCase().includes('impact')) {
+            key.toLowerCase().includes('impact')
+          ) {
             badge = value >= 7 ? 'success' : value >= 4 ? 'warning' : 'danger';
           }
           // Inverted scale (lower is better) - Code Complexity
@@ -169,7 +183,8 @@ export function generateHtmlReport(
             <td><span class="badge bg-${badge} rounded-pill">${value}</span></td>
           </tr>
         `;
-      }).join('');
+      })
+      .join('');
 
     metricsHtml = `
       <div class="card mb-4 shadow-sm border-info">

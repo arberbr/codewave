@@ -47,12 +47,14 @@ Key Changes:
 ### When Generation Might Fail
 
 **Common Causes:**
+
 - Very large diffs (>500KB) - may timeout
 - Binary files in commit - can't be analyzed
 - Corrupted file content
 - Network issues during generation
 
 **What Happens:**
+
 - Report shows: "Overview generation failed"
 - Agents still evaluate using raw diff
 - Report remains complete and useful
@@ -61,6 +63,7 @@ Key Changes:
 ### Using Developer Overview
 
 **For Team Leads:**
+
 ```
 Quick commit assessment without reading full diff
 1. Scan Developer Overview summary (10 seconds)
@@ -69,6 +72,7 @@ Quick commit assessment without reading full diff
 ```
 
 **For CI/CD Pipelines:**
+
 ```bash
 # Extract overview
 jq '.developerOverview' results.json
@@ -78,6 +82,7 @@ jq '.developerOverview' results.json | grep -i "breaking change"
 ```
 
 **For Documentation:**
+
 ```bash
 # Generate change log
 for file in .evaluated-commits/*/results.json; do
@@ -100,6 +105,7 @@ Sophisticated algorithm that measures consensus among agents and optimizes evalu
 **Score Range**: 0.0 to 1.0 (higher = better consensus)
 
 **Interpretation**:
+
 - **0.9+**: Excellent consensus, very reliable evaluation
 - **0.7-0.8**: Good consensus, minor disagreements
 - **0.5-0.6**: Moderate agreement, some conflicting views
@@ -108,6 +114,7 @@ Sophisticated algorithm that measures consensus among agents and optimizes evalu
 ### How Convergence Detection Works
 
 **Phase 1: Calculate Metric Variance**
+
 ```
 For each 7-pillar metric:
 1. Get final score from each agent
@@ -120,6 +127,7 @@ Complexity scores: [3, 5, 7, 4, 6] → variance = 0.8 (high)
 ```
 
 **Phase 2: Weighted Aggregation**
+
 ```
 Convergence = 1 - (weighted_average_variance)
 
@@ -131,6 +139,7 @@ Weights:
 ```
 
 **Phase 3: Dynamic Round Optimization**
+
 ```
 Target: Convergence >= 0.75 (configurable)
 
@@ -150,6 +159,7 @@ When to stop:
 ### Convergence in Action
 
 **Low Convergence Example:**
+
 ```
 Evaluation 1 - Initial Assessments:
 - Code Quality: [7, 6, 8] → Convergence: 0.45 (low)
@@ -166,6 +176,7 @@ Round 3 - Validation:
 ```
 
 **High Convergence Example:**
+
 ```
 Evaluation 1 - Initial Assessment:
 - All agents strongly agree on scores
@@ -177,6 +188,7 @@ Evaluation 1 - Initial Assessment:
 ### Using Convergence Scores
 
 **For Quality Assurance:**
+
 ```bash
 # Find unreliable evaluations (low convergence)
 jq '.[] | select(.convergenceScore < 0.6)' \
@@ -184,6 +196,7 @@ jq '.[] | select(.convergenceScore < 0.6)' \
 ```
 
 **For Statistical Analysis:**
+
 ```bash
 # Average convergence across commits
 jq '[.[].convergenceScore] | add / length' \
@@ -191,6 +204,7 @@ jq '[.[].convergenceScore] | add / length' \
 ```
 
 **For Flagging Problem Commits:**
+
 ```bash
 # If convergence drops, something unusual about commit
 jq -r 'select(.convergenceScore < 0.5) | .evaluationNumber' \
@@ -200,12 +214,14 @@ jq -r 'select(.convergenceScore < 0.5) | .evaluationNumber' \
 ### Convergence Insights
 
 **What Low Convergence Tells You:**
+
 1. Commit is unusual or controversial
 2. Different aspects are in tension (e.g., high impact but high risk)
 3. Worth extra review and discussion
 4. Disagreement is valuable - multiple perspectives on real trade-offs
 
 **What High Convergence Tells You:**
+
 1. Straightforward change
 2. Clear quality assessment
 3. Reliable evaluation
@@ -220,13 +236,16 @@ The core mechanism that makes CodeWave's evaluation sophisticated: agents discus
 ### How Multi-Round Discussion Works
 
 #### Round 1: Initial Assessment
+
 **Agent Activity:**
+
 - Each agent evaluates independently
 - Uses only: diff, metadata, developer overview
 - No knowledge of other agents' scores
 - Each provides: summary, details, metrics
 
 **Example Output:**
+
 ```
 Business Analyst 🎯
 Summary: High-impact feature for user workflows
@@ -242,18 +261,22 @@ Metrics: Code Quality=6
 ```
 
 **Purpose of Round 1:**
+
 - Establish baseline perspectives
 - Identify areas of agreement/disagreement
 - Set context for discussion
 
 #### Round 2: Concerns & Refinement
+
 **What Happens:**
+
 1. System collects all Round 1 scores
 2. Agents see **only their own assessment** plus the **aggregated consensus**
 3. System formulates concerns: "Impact scored 8 but Code Quality only 6 - why?"
 4. Agents review concerns and can revise scores
 
 **Agent Activity in Round 2:**
+
 ```
 Architect sees:
 - Their score: Complexity = 4
@@ -269,19 +292,23 @@ Revising: Complexity = 6 (was 4), Tech Debt = +3 hours"
 ```
 
 **Purpose of Round 2:**
+
 - Challenge assumptions
 - Incorporate peer feedback
 - Move toward consensus
 - Highlight real trade-offs
 
 #### Round 3: Validation & Consensus
+
 **What Happens:**
+
 1. System shows updated scores from Round 2
 2. Agents review changes and final metrics
 3. Final opportunity to adjust or validate
 4. System calculates convergence
 
 **Agent Activity in Round 3:**
+
 ```
 All agents review updated scores
 Are new assessments reasonable? Yes ✓
@@ -291,6 +318,7 @@ Convergence Score: 0.78 ✓ (meets target)
 ```
 
 **Purpose of Round 3:**
+
 - Final validation
 - Ensure changes are justified
 - Build consensus
@@ -299,16 +327,20 @@ Convergence Score: 0.78 ✓ (meets target)
 ### What Each Agent Evaluates
 
 #### Round 1-3: Business Analyst 🎯
+
 **Primary Metrics:**
+
 - Functional Impact (1-10): User/business value
 - Ideal Time (hours): Perfect-case implementation time
 
 **Questions in Discussions:**
+
 - "Is this business value real or perceived?"
 - "Are requirements clear enough for accurate time estimation?"
 - "Does scope match the effort?"
 
 **Concerns Raised:**
+
 - Scope creep: "Impact high but ideal time seems short"
 - Unclear requirements: "Can't estimate if requirements are vague"
 - Misalignment: "High complexity but low impact seems risky"
@@ -316,16 +348,20 @@ Convergence Score: 0.78 ✓ (meets target)
 ---
 
 #### Round 1-3: Developer Author 👨‍💻
+
 **Primary Metrics:**
+
 - Actual Time (hours): Real time spent
 - Tech Debt (hours): Debt added (+) or removed (-)
 
 **Questions in Discussions:**
+
 - "What obstacles were encountered?"
 - "Is the implementation approach sustainable?"
 - "Did architectural choices increase debt?"
 
 **Concerns Raised:**
+
 - Time overrun: "Actual time 3x ideal - significant complexity"
 - Debt accumulation: "Implementation created architectural liabilities"
 - Maintainability: "Technical choices make future changes harder"
@@ -333,16 +369,20 @@ Convergence Score: 0.78 ✓ (meets target)
 ---
 
 #### Round 1-3: Developer Reviewer 🔍
+
 **Primary Metrics:**
+
 - Code Quality (1-10): Correctness, design, readability
 - Secondary: Test coverage adequacy
 
 **Questions in Discussions:**
+
 - "Does the code work correctly?"
 - "Are there design improvements?"
 - "Is it maintainable?"
 
 **Concerns Raised:**
+
 - Design issues: "Violates DRY principle, creates duplication"
 - Readability: "Complex logic needs comments"
 - Testing: "Core logic lacks test coverage"
@@ -350,16 +390,20 @@ Convergence Score: 0.78 ✓ (meets target)
 ---
 
 #### Round 1-3: Senior Architect 🏛️
+
 **Primary Metrics:**
+
 - Complexity (1-10, reversed): How simple/complex is the architecture?
 - Tech Debt (hours): Architectural liabilities
 
 **Questions in Discussions:**
+
 - "Is this scalable?"
 - "Does it follow SOLID principles?"
 - "What long-term consequences?"
 
 **Concerns Raised:**
+
 - Scalability: "Direct database access won't scale to production"
 - Coupling: "Too tightly coupled to external service"
 - Patterns: "Violates established architectural patterns"
@@ -367,16 +411,20 @@ Convergence Score: 0.78 ✓ (meets target)
 ---
 
 #### Round 1-3: SDET 🧪
+
 **Primary Metrics:**
+
 - Test Coverage (1-10): Comprehensiveness of testing
 - Quality: Automation framework quality
 
 **Questions in Discussions:**
+
 - "Are we confident this works?"
 - "What scenarios aren't tested?"
 - "Is test code maintainable?"
 
 **Concerns Raised:**
+
 - Coverage gaps: "Happy path tested but error handling not"
 - Fragile tests: "Tests too tightly coupled to implementation"
 - Infrastructure: "Test framework doesn't support edge case scenarios"
@@ -386,6 +434,7 @@ Convergence Score: 0.78 ✓ (meets target)
 ### Why Multi-Round Discussion Improves Evaluation
 
 **Problem with Single-Round Evaluation:**
+
 ```
 Agent 1 sees: "This is high impact"
 Agent 2 sees: "This has high complexity"
@@ -397,6 +446,7 @@ Without discussion:
 ```
 
 **With Multi-Round Discussion:**
+
 ```
 Round 1: All agents submit assessments
 Round 2: System highlights: "High impact but low quality - contradiction?"
@@ -407,12 +457,14 @@ Round 3: Agents discuss and agree: "High impact, but ship only with test improve
 ### Multi-Round Discussion in HTML Report
 
 **View the Timeline:**
+
 1. Open HTML report
 2. Click "Conversation Timeline" section
 3. See each round's assessments
 4. Understand how agents refined their thinking
 
 **What to Look For:**
+
 - **Consensus**: When all agents agree (stronger signals)
 - **Debate**: Different perspectives highlight real trade-offs
 - **Reasoning**: Why scores changed between rounds
@@ -420,6 +472,7 @@ Round 3: Agents discuss and agree: "High impact, but ship only with test improve
 ### Practical Examples
 
 **Example 1: Quality vs. Speed Trade-off**
+
 ```
 Round 1:
 - Business Analyst: "High impact, implement quickly" (Impact=8, Ideal=4)
@@ -438,6 +491,7 @@ Round 3 Result:
 ```
 
 **Example 2: Framework Decision**
+
 ```
 Round 1:
 - Architect: "New framework adds complexity" (Complexity=3)
@@ -460,6 +514,7 @@ Round 3 Result:
 ## Understanding Evaluation Depth
 
 ### Shallow Evaluation (Converges Quickly)
+
 ```
 Round 1 Scores: [8, 8, 8, 8, 8]
 Convergence: 0.98 ✓
@@ -470,6 +525,7 @@ Reliability: Very high (unanimous)
 ```
 
 ### Deep Evaluation (Multiple Rounds)
+
 ```
 Round 1: [8, 5, 6, 4, 7] → Convergence: 0.35 (low)
 Round 2: [7, 6, 6, 5, 7] → Convergence: 0.62 (improving)
@@ -482,6 +538,7 @@ Detail: Rich with nuance
 ```
 
 ### Key Insight
+
 **More rounds ≠ worse evaluation**
 
 Sometimes high-complexity changes need multiple rounds to properly assess trade-offs. The convergence score tells you if agents reached meaningful consensus.
@@ -491,6 +548,7 @@ Sometimes high-complexity changes need multiple rounds to properly assess trade-
 ## Advanced Usage
 
 ### Analyzing Discussion Quality
+
 ```bash
 # Find commits with most agent disagreement
 jq -s 'sort_by(.convergenceScore) | .[0:5]' \
@@ -498,6 +556,7 @@ jq -s 'sort_by(.convergenceScore) | .[0:5]' \
 ```
 
 ### Identifying Red Flags
+
 ```bash
 # Low convergence suggests need for discussion
 jq '.[] | select(.convergenceScore < 0.6) | .evaluationNumber' \
@@ -505,6 +564,7 @@ jq '.[] | select(.convergenceScore < 0.6) | .evaluationNumber' \
 ```
 
 ### Tracking Consensus Over Time
+
 ```bash
 # Graph convergence trend
 for eval in .evaluated-commits/*/history.json; do
@@ -517,23 +577,29 @@ done | sort -t: -k2 -rn
 ## Troubleshooting
 
 ### Convergence Very Low (<0.3)
+
 **Possible Causes:**
+
 1. Highly ambiguous commit
 2. Major architectural disagreement
 3. Unclear requirements
 
 **What to Do:**
+
 - Review agent feedback carefully
 - Look for specific concerns in conversation
 - Consider follow-up PR to address issues
 
 ### Convergence Stays Low Across Multiple Evaluations
+
 **Possible Causes:**
+
 1. Commit is genuinely controversial
 2. Multiple valid interpretations
 3. System may need recalibration
 
 **What to Do:**
+
 - This is valuable signal! Agents keep finding issues
 - Treat as "needs team discussion"
 - Low convergence is honest evaluation

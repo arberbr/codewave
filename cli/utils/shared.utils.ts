@@ -11,7 +11,11 @@ import { AppConfig } from '../../src/config/config.interface';
 import { generateEnhancedHtmlReport } from '../../src/formatters/html-report-formatter-enhanced';
 import { generateConversationTranscript } from '../../src/formatters/conversation-transcript-formatter';
 import { AgentResult } from '../../src/agents/agent.interface';
-import { TokenSnapshot, MetricsSnapshot, EvaluationHistoryEntry } from '../../src/types/output.types';
+import {
+  TokenSnapshot,
+  MetricsSnapshot,
+  EvaluationHistoryEntry,
+} from '../../src/types/output.types';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -19,14 +23,14 @@ import path from 'path';
  * Generate timestamp in yyyyMMddHHmmss format
  */
 export function generateTimestamp(): string {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    return `${year}${month}${day}${hours}${minutes}${seconds}`;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  return `${year}${month}${day}${hours}${minutes}${seconds}`;
 }
 
 /**
@@ -34,72 +38,70 @@ export function generateTimestamp(): string {
  * Agent IDs: 'business-analyst', 'sdet', 'developer-author', 'senior-architect', 'developer-reviewer'
  */
 export function createAgentRegistry(config: AppConfig): AgentRegistry {
-    const agentRegistry = new AgentRegistry();
-    const enabledAgents = config.agents.enabled || [
-        'business-analyst',
-        'sdet',
-        'developer-author',
-        'senior-architect',
-        'developer-reviewer',
-    ];
+  const agentRegistry = new AgentRegistry();
+  const enabledAgents = config.agents.enabled || [
+    'business-analyst',
+    'sdet',
+    'developer-author',
+    'senior-architect',
+    'developer-reviewer',
+  ];
 
-    // Validate that at least one agent is enabled
-    if (!enabledAgents || enabledAgents.length === 0) {
-        console.warn(
-            '⚠️  No agents enabled in config. Enabling all agents by default.'
-        );
-        enabledAgents.push(
-            'business-analyst',
-            'sdet',
-            'developer-author',
-            'senior-architect',
-            'developer-reviewer'
-        );
+  // Validate that at least one agent is enabled
+  if (!enabledAgents || enabledAgents.length === 0) {
+    console.warn('⚠️  No agents enabled in config. Enabling all agents by default.');
+    enabledAgents.push(
+      'business-analyst',
+      'sdet',
+      'developer-author',
+      'senior-architect',
+      'developer-reviewer'
+    );
+  }
+
+  // Register agents based on enabled list
+  const agentMap: Record<string, () => any> = {
+    'business-analyst': () => new BusinessAnalystAgent(config),
+    sdet: () => new SDETAgent(config),
+    'developer-author': () => new DeveloperAuthorAgent(config),
+    'senior-architect': () => new SeniorArchitectAgent(config),
+    'developer-reviewer': () => new DeveloperReviewerAgent(config),
+  };
+
+  for (const agentId of enabledAgents) {
+    const agentFactory = agentMap[agentId];
+    if (agentFactory) {
+      agentRegistry.register(agentFactory());
+    } else {
+      console.warn(`⚠️  Unknown agent: ${agentId}. Skipping.`);
     }
+  }
 
-    // Register agents based on enabled list
-    const agentMap: Record<string, () => any> = {
-        'business-analyst': () => new BusinessAnalystAgent(config),
-        sdet: () => new SDETAgent(config),
-        'developer-author': () => new DeveloperAuthorAgent(config),
-        'senior-architect': () => new SeniorArchitectAgent(config),
-        'developer-reviewer': () => new DeveloperReviewerAgent(config),
-    };
-
-    for (const agentId of enabledAgents) {
-        const agentFactory = agentMap[agentId];
-        if (agentFactory) {
-            agentRegistry.register(agentFactory());
-        } else {
-            console.warn(`⚠️  Unknown agent: ${agentId}. Skipping.`);
-        }
-    }
-
-    return agentRegistry;
+  return agentRegistry;
 }
 
 /**
  * Metadata for a commit evaluation
  */
 export interface EvaluationMetadata {
-    commitHash?: string;
-    commitAuthor?: string;
-    commitDate?: string;
-    commitMessage?: string;
-    timestamp?: string;
-    source?: string; // 'commit', 'staged', 'current', 'file'
-    developerOverview?: string;
+  commitHash?: string;
+  commitAuthor?: string;
+  commitDate?: string;
+  commitMessage?: string;
+  timestamp?: string;
+  source?: string; // 'commit', 'staged', 'current', 'file'
+  developerOverview?: string;
 }
 
 /**
  * Options for saving evaluation reports
  */
 export interface SaveReportsOptions {
-    outputDir: string;
-    diff: string;
-    agentResults: AgentResult[];
-    metadata?: EvaluationMetadata;
-    developerOverview?: string;
+  outputDir: string;
+  diff: string;
+  agentResults: AgentResult[];
+  metadata?: EvaluationMetadata;
+  developerOverview?: string;
 }
 
 /**
@@ -113,181 +115,171 @@ export interface SaveReportsOptions {
  * - history.json (tracks re-evaluations)
  */
 export async function saveEvaluationReports(options: SaveReportsOptions): Promise<void> {
-    const { outputDir, diff, agentResults, metadata = {}, developerOverview } = options;
+  const { outputDir, diff, agentResults, metadata = {}, developerOverview } = options;
 
-    // Ensure output directory exists
-    await fs.mkdir(outputDir, { recursive: true });
+  // Ensure output directory exists
+  await fs.mkdir(outputDir, { recursive: true });
 
-    // Track evaluation history with metrics and tokens
-    await trackEvaluationHistory(outputDir, metadata, agentResults);
+  // Track evaluation history with metrics and tokens
+  await trackEvaluationHistory(outputDir, metadata, agentResults);
 
-    // 1. Save results.json
-    const resultsJson = {
-        timestamp: metadata.timestamp || new Date().toISOString(),
-        metadata: {
-            commitHash: metadata.commitHash,
-            commitAuthor: metadata.commitAuthor,
-            commitDate: metadata.commitDate,
-            commitMessage: metadata.commitMessage,
-            source: metadata.source,
-        },
-        developerOverview: developerOverview || null,
-        agents: agentResults,
-    };
-    await fs.writeFile(
-        path.join(outputDir, 'results.json'),
-        JSON.stringify(resultsJson, null, 2),
+  // 1. Save results.json
+  const resultsJson = {
+    timestamp: metadata.timestamp || new Date().toISOString(),
+    metadata: {
+      commitHash: metadata.commitHash,
+      commitAuthor: metadata.commitAuthor,
+      commitDate: metadata.commitDate,
+      commitMessage: metadata.commitMessage,
+      source: metadata.source,
+    },
+    developerOverview: developerOverview || null,
+    agents: agentResults,
+  };
+  await fs.writeFile(path.join(outputDir, 'results.json'), JSON.stringify(resultsJson, null, 2));
+
+  // 2. Generate HTML report
+  generateEnhancedHtmlReport(agentResults, path.join(outputDir, 'report-enhanced.html'), {
+    commitHash: metadata.commitHash,
+    commitAuthor: metadata.commitAuthor,
+    commitMessage: metadata.commitMessage,
+    commitDate: metadata.commitDate,
+    timestamp: metadata.timestamp || new Date().toISOString(),
+    developerOverview,
+  });
+
+  // 3. Generate conversation transcript
+  generateConversationTranscript(agentResults, path.join(outputDir, 'conversation.md'), {
+    commitHash: metadata.commitHash,
+    timestamp: metadata.timestamp || new Date().toISOString(),
+  });
+
+  // 4. Save commit diff
+  await fs.writeFile(path.join(outputDir, 'commit.diff'), diff);
+
+  // 5. Generate summary text
+  const summary = generateSummaryText(agentResults, metadata);
+  await fs.writeFile(path.join(outputDir, 'summary.txt'), summary);
+
+  // 6. Update evaluation index
+  try {
+    await updateEvaluationIndex(outputDir, metadata);
+  } catch (indexError) {
+    console.error(
+      'Failed to update evaluation index:',
+      indexError instanceof Error ? indexError.message : String(indexError)
     );
-
-    // 2. Generate HTML report
-    generateEnhancedHtmlReport(
-        agentResults,
-        path.join(outputDir, 'report-enhanced.html'),
-        {
-            commitHash: metadata.commitHash,
-            commitAuthor: metadata.commitAuthor,
-            commitMessage: metadata.commitMessage,
-            commitDate: metadata.commitDate,
-            timestamp: metadata.timestamp || new Date().toISOString(),
-            developerOverview,
-        }
-    );
-
-    // 3. Generate conversation transcript
-    generateConversationTranscript(
-        agentResults,
-        path.join(outputDir, 'conversation.md'),
-        {
-            commitHash: metadata.commitHash,
-            timestamp: metadata.timestamp || new Date().toISOString(),
-        }
-    );
-
-    // 4. Save commit diff
-    await fs.writeFile(path.join(outputDir, 'commit.diff'), diff);
-
-    // 5. Generate summary text
-    const summary = generateSummaryText(agentResults, metadata);
-    await fs.writeFile(path.join(outputDir, 'summary.txt'), summary);
-
-    // 6. Update evaluation index
-    try {
-        await updateEvaluationIndex(outputDir, metadata);
-    } catch (indexError) {
-        console.error('Failed to update evaluation index:', indexError instanceof Error ? indexError.message : String(indexError));
-        throw indexError; // Re-throw to propagate the error
-    }
+    throw indexError; // Re-throw to propagate the error
+  }
 }
 
 /**
  * Extract metrics from final round agent results (last 5 agents)
  */
 function extractMetricsSnapshot(agentResults: AgentResult[]): MetricsSnapshot {
-    // Get final round agents (last 5)
-    const finalAgents = agentResults.slice(-5);
+  // Get final round agents (last 5)
+  const finalAgents = agentResults.slice(-5);
 
-    const metricSums = {
-        functionalImpact: 0,
-        idealTimeHours: 0,
-        testCoverage: 0,
-        codeQuality: 0,
-        codeComplexity: 0,
-        actualTimeHours: 0,
-        technicalDebtHours: 0,
-    };
+  const metricSums = {
+    functionalImpact: 0,
+    idealTimeHours: 0,
+    testCoverage: 0,
+    codeQuality: 0,
+    codeComplexity: 0,
+    actualTimeHours: 0,
+    technicalDebtHours: 0,
+  };
 
-    let count = 0;
-    finalAgents.forEach((agent) => {
-        if (agent.metrics) {
-            metricSums.functionalImpact += agent.metrics.functionalImpact || 0;
-            metricSums.idealTimeHours += agent.metrics.idealTimeHours || 0;
-            metricSums.testCoverage += agent.metrics.testCoverage || 0;
-            metricSums.codeQuality += agent.metrics.codeQuality || 0;
-            metricSums.codeComplexity += agent.metrics.codeComplexity || 0;
-            metricSums.actualTimeHours += agent.metrics.actualTimeHours || 0;
-            metricSums.technicalDebtHours += agent.metrics.technicalDebtHours || 0;
-            count++;
-        }
-    });
-
-    if (count === 0) {
-        return {
-            functionalImpact: 0,
-            idealTimeHours: 0,
-            testCoverage: 0,
-            codeQuality: 0,
-            codeComplexity: 0,
-            actualTimeHours: 0,
-            technicalDebtHours: 0,
-        };
+  let count = 0;
+  finalAgents.forEach((agent) => {
+    if (agent.metrics) {
+      metricSums.functionalImpact += agent.metrics.functionalImpact || 0;
+      metricSums.idealTimeHours += agent.metrics.idealTimeHours || 0;
+      metricSums.testCoverage += agent.metrics.testCoverage || 0;
+      metricSums.codeQuality += agent.metrics.codeQuality || 0;
+      metricSums.codeComplexity += agent.metrics.codeComplexity || 0;
+      metricSums.actualTimeHours += agent.metrics.actualTimeHours || 0;
+      metricSums.technicalDebtHours += agent.metrics.technicalDebtHours || 0;
+      count++;
     }
+  });
 
+  if (count === 0) {
     return {
-        functionalImpact: Number((metricSums.functionalImpact / count).toFixed(1)),
-        idealTimeHours: Number((metricSums.idealTimeHours / count).toFixed(2)),
-        testCoverage: Number((metricSums.testCoverage / count).toFixed(1)),
-        codeQuality: Number((metricSums.codeQuality / count).toFixed(1)),
-        codeComplexity: Number((metricSums.codeComplexity / count).toFixed(1)),
-        actualTimeHours: Number((metricSums.actualTimeHours / count).toFixed(2)),
-        technicalDebtHours: Number((metricSums.technicalDebtHours / count).toFixed(2)),
+      functionalImpact: 0,
+      idealTimeHours: 0,
+      testCoverage: 0,
+      codeQuality: 0,
+      codeComplexity: 0,
+      actualTimeHours: 0,
+      technicalDebtHours: 0,
     };
+  }
+
+  return {
+    functionalImpact: Number((metricSums.functionalImpact / count).toFixed(1)),
+    idealTimeHours: Number((metricSums.idealTimeHours / count).toFixed(2)),
+    testCoverage: Number((metricSums.testCoverage / count).toFixed(1)),
+    codeQuality: Number((metricSums.codeQuality / count).toFixed(1)),
+    codeComplexity: Number((metricSums.codeComplexity / count).toFixed(1)),
+    actualTimeHours: Number((metricSums.actualTimeHours / count).toFixed(2)),
+    technicalDebtHours: Number((metricSums.technicalDebtHours / count).toFixed(2)),
+  };
 }
 
 /**
  * Extract token usage from all agent results
  */
 function extractTokenSnapshot(agentResults: AgentResult[]): TokenSnapshot {
-    let totalInputTokens = 0;
-    let totalOutputTokens = 0;
-    let totalCost = 0;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let totalCost = 0;
 
-    agentResults.forEach((agent) => {
-        if (agent.tokenUsage) {
-            totalInputTokens += agent.tokenUsage.inputTokens || 0;
-            totalOutputTokens += agent.tokenUsage.outputTokens || 0;
-        }
-    });
+  agentResults.forEach((agent) => {
+    if (agent.tokenUsage) {
+      totalInputTokens += agent.tokenUsage.inputTokens || 0;
+      totalOutputTokens += agent.tokenUsage.outputTokens || 0;
+    }
+  });
 
-    // Calculate cost based on provider and model
-    const inputPrice = 3.0; // Anthropic Claude 3.5 Sonnet: $3/1M
-    const outputPrice = 15.0; // $15/1M
-    totalCost =
-        (totalInputTokens / 1000000) * inputPrice +
-        (totalOutputTokens / 1000000) * outputPrice;
+  // Calculate cost based on provider and model
+  const inputPrice = 3.0; // Anthropic Claude 3.5 Sonnet: $3/1M
+  const outputPrice = 15.0; // $15/1M
+  totalCost =
+    (totalInputTokens / 1000000) * inputPrice + (totalOutputTokens / 1000000) * outputPrice;
 
-    return {
-        inputTokens: totalInputTokens,
-        outputTokens: totalOutputTokens,
-        totalTokens: totalInputTokens + totalOutputTokens,
-        totalCost: Number(totalCost.toFixed(4)),
-    };
+  return {
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
+    totalTokens: totalInputTokens + totalOutputTokens,
+    totalCost: Number(totalCost.toFixed(4)),
+  };
 }
 
 /**
  * Calculate convergence score from agent results
  */
 function calculateConvergenceScore(agentResults: AgentResult[]): number {
-    if (agentResults.length < 5) return 0;
+  if (agentResults.length < 5) return 0;
 
-    // Get final round agents
-    const finalAgents = agentResults.slice(-5);
+  // Get final round agents
+  const finalAgents = agentResults.slice(-5);
 
-    // Simple convergence check: measure variance in code quality scores
-    const qualityScores = finalAgents
-        .filter((a) => a.metrics && a.metrics.codeQuality)
-        .map((a) => a.metrics!.codeQuality);
+  // Simple convergence check: measure variance in code quality scores
+  const qualityScores = finalAgents
+    .filter((a) => a.metrics && a.metrics.codeQuality)
+    .map((a) => a.metrics!.codeQuality);
 
-    if (qualityScores.length < 2) return 0;
+  if (qualityScores.length < 2) return 0;
 
-    const mean = qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length;
-    const variance =
-        qualityScores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) /
-        qualityScores.length;
-    const stdDev = Math.sqrt(variance);
+  const mean = qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length;
+  const variance =
+    qualityScores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / qualityScores.length;
+  const stdDev = Math.sqrt(variance);
 
-    // Convergence score: 0 if stdDev > 2, 1 if stdDev == 0, linear in between
-    const convergence = Math.max(0, 1 - stdDev / 2);
-    return Number(convergence.toFixed(2));
+  // Convergence score: 0 if stdDev > 2, 1 if stdDev == 0, linear in between
+  const convergence = Math.max(0, 1 - stdDev / 2);
+  return Number(convergence.toFixed(2));
 }
 
 /**
@@ -295,111 +287,111 @@ function calculateConvergenceScore(agentResults: AgentResult[]): number {
  * Maintains a history.json file with full metrics snapshots for each evaluation
  */
 async function trackEvaluationHistory(
-    outputDir: string,
-    metadata: EvaluationMetadata,
-    agentResults?: AgentResult[]
+  outputDir: string,
+  metadata: EvaluationMetadata,
+  agentResults?: AgentResult[]
 ): Promise<void> {
-    const historyPath = path.join(outputDir, 'history.json');
+  const historyPath = path.join(outputDir, 'history.json');
 
-    let history: EvaluationHistoryEntry[] = [];
+  let history: EvaluationHistoryEntry[] = [];
 
-    // Read existing history
-    try {
-        const content = await fs.readFile(historyPath, 'utf-8');
-        history = JSON.parse(content);
-    } catch {
-        // No history yet
-        history = [];
-    }
+  // Read existing history
+  try {
+    const content = await fs.readFile(historyPath, 'utf-8');
+    history = JSON.parse(content);
+  } catch {
+    // No history yet
+    history = [];
+  }
 
-    // Extract metrics and tokens if agent results provided
-    const newEntry: EvaluationHistoryEntry = {
-        timestamp: metadata.timestamp || new Date().toISOString(),
-        source: metadata.source || 'unknown',
-        evaluationNumber: history.length + 1,
-        metrics: agentResults
-            ? extractMetricsSnapshot(agentResults)
-            : {
-                  functionalImpact: 0,
-                  idealTimeHours: 0,
-                  testCoverage: 0,
-                  codeQuality: 0,
-                  codeComplexity: 0,
-                  actualTimeHours: 0,
-                  technicalDebtHours: 0,
-              },
-        tokens: agentResults
-            ? extractTokenSnapshot(agentResults)
-            : {
-                  inputTokens: 0,
-                  outputTokens: 0,
-                  totalTokens: 0,
-                  totalCost: 0,
-              },
-        convergenceScore: agentResults ? calculateConvergenceScore(agentResults) : 0,
-    };
+  // Extract metrics and tokens if agent results provided
+  const newEntry: EvaluationHistoryEntry = {
+    timestamp: metadata.timestamp || new Date().toISOString(),
+    source: metadata.source || 'unknown',
+    evaluationNumber: history.length + 1,
+    metrics: agentResults
+      ? extractMetricsSnapshot(agentResults)
+      : {
+          functionalImpact: 0,
+          idealTimeHours: 0,
+          testCoverage: 0,
+          codeQuality: 0,
+          codeComplexity: 0,
+          actualTimeHours: 0,
+          technicalDebtHours: 0,
+        },
+    tokens: agentResults
+      ? extractTokenSnapshot(agentResults)
+      : {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          totalCost: 0,
+        },
+    convergenceScore: agentResults ? calculateConvergenceScore(agentResults) : 0,
+  };
 
-    history.push(newEntry);
+  history.push(newEntry);
 
-    // Write back
-    await fs.writeFile(historyPath, JSON.stringify(history, null, 2));
+  // Write back
+  await fs.writeFile(historyPath, JSON.stringify(history, null, 2));
 }
 
 /**
  * Generate summary text from agent results
  */
 function generateSummaryText(agentResults: AgentResult[], metadata: EvaluationMetadata): string {
-    const lines: string[] = [];
+  const lines: string[] = [];
 
-    lines.push('='.repeat(80));
-    lines.push('COMMIT EVALUATION SUMMARY');
-    lines.push('='.repeat(80));
+  lines.push('='.repeat(80));
+  lines.push('COMMIT EVALUATION SUMMARY');
+  lines.push('='.repeat(80));
+  lines.push('');
+
+  if (metadata.commitHash) {
+    lines.push(`Commit: ${metadata.commitHash}`);
+  }
+  if (metadata.commitAuthor) {
+    lines.push(`Author: ${metadata.commitAuthor}`);
+  }
+  if (metadata.commitDate) {
+    lines.push(`Date: ${metadata.commitDate}`);
+  }
+  if (metadata.commitMessage) {
+    lines.push(`Message: ${metadata.commitMessage}`);
+  }
+  if (metadata.source) {
+    lines.push(`Source: ${metadata.source}`);
+  }
+  if (metadata.timestamp) {
+    lines.push(`Evaluated: ${metadata.timestamp}`);
+  }
+
+  lines.push('');
+  lines.push('-'.repeat(80));
+  lines.push('AGENT EVALUATIONS');
+  lines.push('-'.repeat(80));
+  lines.push('');
+
+  for (const result of agentResults) {
+    lines.push(`Agent: ${result.agentName || 'Unknown'}`);
+
+    if (result.metrics) {
+      lines.push('Metrics:');
+      for (const [key, value] of Object.entries(result.metrics)) {
+        lines.push(`  ${key}: ${value}`);
+      }
+    }
+
+    if (result.summary) {
+      lines.push('Summary:');
+      lines.push(`  ${result.summary}`);
+    }
+
     lines.push('');
+  }
 
-    if (metadata.commitHash) {
-        lines.push(`Commit: ${metadata.commitHash}`);
-    }
-    if (metadata.commitAuthor) {
-        lines.push(`Author: ${metadata.commitAuthor}`);
-    }
-    if (metadata.commitDate) {
-        lines.push(`Date: ${metadata.commitDate}`);
-    }
-    if (metadata.commitMessage) {
-        lines.push(`Message: ${metadata.commitMessage}`);
-    }
-    if (metadata.source) {
-        lines.push(`Source: ${metadata.source}`);
-    }
-    if (metadata.timestamp) {
-        lines.push(`Evaluated: ${metadata.timestamp}`);
-    }
-
-    lines.push('');
-    lines.push('-'.repeat(80));
-    lines.push('AGENT EVALUATIONS');
-    lines.push('-'.repeat(80));
-    lines.push('');
-
-    for (const result of agentResults) {
-        lines.push(`Agent: ${result.agentName || 'Unknown'}`);
-
-        if (result.metrics) {
-            lines.push('Metrics:');
-            for (const [key, value] of Object.entries(result.metrics)) {
-                lines.push(`  ${key}: ${value}`);
-            }
-        }
-
-        if (result.summary) {
-            lines.push('Summary:');
-            lines.push(`  ${result.summary}`);
-        }
-
-        lines.push('');
-    }
-
-    return lines.join('\n');
+  return lines.join('\n');
 }
 
 /**
@@ -407,7 +399,7 @@ function generateSummaryText(agentResults: AgentResult[], metadata: EvaluationMe
  * Returns: .evaluated-commits/
  */
 export function getEvaluationRoot(baseDir: string = '.'): string {
-    return path.join(baseDir, '.evaluated-commits');
+  return path.join(baseDir, '.evaluated-commits');
 }
 
 /**
@@ -416,15 +408,15 @@ export function getEvaluationRoot(baseDir: string = '.'): string {
  * Works for both single and batch evaluations - always updates the same folder
  */
 export async function createEvaluationDirectory(
-    commitHash: string,
-    baseDir: string = '.'
+  commitHash: string,
+  baseDir: string = '.'
 ): Promise<string> {
-    const evaluationsRoot = getEvaluationRoot(baseDir);
-    const commitDir = path.join(evaluationsRoot, commitHash);
+  const evaluationsRoot = getEvaluationRoot(baseDir);
+  const commitDir = path.join(evaluationsRoot, commitHash);
 
-    await fs.mkdir(commitDir, { recursive: true });
+  await fs.mkdir(commitDir, { recursive: true });
 
-    return commitDir;
+  return commitDir;
 }
 
 /**
@@ -433,70 +425,70 @@ export async function createEvaluationDirectory(
  * This function now just returns the evaluation root
  */
 export async function createBatchDirectory(
-    identifier: string,
-    baseDir: string = '.'
+  identifier: string,
+  baseDir: string = '.'
 ): Promise<string> {
-    const evaluationsRoot = getEvaluationRoot(baseDir);
-    await fs.mkdir(evaluationsRoot, { recursive: true });
-    return evaluationsRoot;
+  const evaluationsRoot = getEvaluationRoot(baseDir);
+  await fs.mkdir(evaluationsRoot, { recursive: true });
+  return evaluationsRoot;
 }
 
 /**
  * Calculate averaged metrics from agent results
  */
 async function calculateAveragedMetrics(evaluationDir: string): Promise<any> {
-    try {
-        const resultsPath = path.join(evaluationDir, 'results.json');
-        const content = await fs.readFile(resultsPath, 'utf-8');
-        const results = JSON.parse(content);
+  try {
+    const resultsPath = path.join(evaluationDir, 'results.json');
+    const content = await fs.readFile(resultsPath, 'utf-8');
+    const results = JSON.parse(content);
 
-        if (!results.agents || results.agents.length === 0) {
-            return null;
-        }
-
-        // Get final round agents (last 5 entries)
-        const finalAgents = results.agents.slice(-5);
-
-        // Aggregate metrics from all final agents
-        const metricSums = {
-            functionalImpact: 0,
-            idealTimeHours: 0,
-            testCoverage: 0,
-            codeQuality: 0,
-            codeComplexity: 0,
-            actualTimeHours: 0,
-            technicalDebtHours: 0,
-        };
-
-        let count = 0;
-        finalAgents.forEach((agent: any) => {
-            if (agent.metrics) {
-                metricSums.functionalImpact += agent.metrics.functionalImpact || 0;
-                metricSums.idealTimeHours += agent.metrics.idealTimeHours || 0;
-                metricSums.testCoverage += agent.metrics.testCoverage || 0;
-                metricSums.codeQuality += agent.metrics.codeQuality || 0;
-                metricSums.codeComplexity += agent.metrics.codeComplexity || 0;
-                metricSums.actualTimeHours += agent.metrics.actualTimeHours || 0;
-                metricSums.technicalDebtHours += agent.metrics.technicalDebtHours || 0;
-                count++;
-            }
-        });
-
-        if (count === 0) return null;
-
-        // Calculate averages
-        return {
-            functionalImpact: Number((metricSums.functionalImpact / count).toFixed(1)),
-            idealTimeHours: Number((metricSums.idealTimeHours / count).toFixed(2)),
-            testCoverage: Number((metricSums.testCoverage / count).toFixed(1)),
-            codeQuality: Number((metricSums.codeQuality / count).toFixed(1)),
-            codeComplexity: Number((metricSums.codeComplexity / count).toFixed(1)),
-            actualTimeHours: Number((metricSums.actualTimeHours / count).toFixed(2)),
-            technicalDebtHours: Number((metricSums.technicalDebtHours / count).toFixed(2)),
-        };
-    } catch {
-        return null;
+    if (!results.agents || results.agents.length === 0) {
+      return null;
     }
+
+    // Get final round agents (last 5 entries)
+    const finalAgents = results.agents.slice(-5);
+
+    // Aggregate metrics from all final agents
+    const metricSums = {
+      functionalImpact: 0,
+      idealTimeHours: 0,
+      testCoverage: 0,
+      codeQuality: 0,
+      codeComplexity: 0,
+      actualTimeHours: 0,
+      technicalDebtHours: 0,
+    };
+
+    let count = 0;
+    finalAgents.forEach((agent: any) => {
+      if (agent.metrics) {
+        metricSums.functionalImpact += agent.metrics.functionalImpact || 0;
+        metricSums.idealTimeHours += agent.metrics.idealTimeHours || 0;
+        metricSums.testCoverage += agent.metrics.testCoverage || 0;
+        metricSums.codeQuality += agent.metrics.codeQuality || 0;
+        metricSums.codeComplexity += agent.metrics.codeComplexity || 0;
+        metricSums.actualTimeHours += agent.metrics.actualTimeHours || 0;
+        metricSums.technicalDebtHours += agent.metrics.technicalDebtHours || 0;
+        count++;
+      }
+    });
+
+    if (count === 0) return null;
+
+    // Calculate averages
+    return {
+      functionalImpact: Number((metricSums.functionalImpact / count).toFixed(1)),
+      idealTimeHours: Number((metricSums.idealTimeHours / count).toFixed(2)),
+      testCoverage: Number((metricSums.testCoverage / count).toFixed(1)),
+      codeQuality: Number((metricSums.codeQuality / count).toFixed(1)),
+      codeComplexity: Number((metricSums.codeComplexity / count).toFixed(1)),
+      actualTimeHours: Number((metricSums.actualTimeHours / count).toFixed(2)),
+      technicalDebtHours: Number((metricSums.technicalDebtHours / count).toFixed(2)),
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -504,160 +496,191 @@ async function calculateAveragedMetrics(evaluationDir: string): Promise<any> {
  * Maintains index.json and generates index.html showing all evaluations
  */
 export async function updateEvaluationIndex(
-    evaluationDir: string,
-    metadata: EvaluationMetadata
+  evaluationDir: string,
+  metadata: EvaluationMetadata
 ): Promise<void> {
-    const evaluationsRoot = path.dirname(evaluationDir);
-    const indexJsonPath = path.join(evaluationsRoot, 'index.json');
-    const indexHtmlPath = path.join(evaluationsRoot, 'index.html');
+  const evaluationsRoot = path.dirname(evaluationDir);
+  const indexJsonPath = path.join(evaluationsRoot, 'index.json');
+  const indexHtmlPath = path.join(evaluationsRoot, 'index.html');
 
-    let index: any[] = [];
+  let index: any[] = [];
 
-    // Read existing index
-    try {
-        const content = await fs.readFile(indexJsonPath, 'utf-8');
-        index = JSON.parse(content);
-    } catch {
-        // Index doesn't exist yet, start fresh
-        index = [];
-    }
+  // Read existing index
+  try {
+    const content = await fs.readFile(indexJsonPath, 'utf-8');
+    index = JSON.parse(content);
+  } catch {
+    // Index doesn't exist yet, start fresh
+    index = [];
+  }
 
-    // Calculate averaged metrics
-    const metrics = await calculateAveragedMetrics(evaluationDir);
+  // Calculate averaged metrics
+  const metrics = await calculateAveragedMetrics(evaluationDir);
 
-    // Find existing entry or create new one
-    const dirName = path.basename(evaluationDir);
-    const existingIndex = index.findIndex(item => item.directory === dirName);
+  // Find existing entry or create new one
+  const dirName = path.basename(evaluationDir);
+  const existingIndex = index.findIndex((item) => item.directory === dirName);
 
-    const entry = {
-        directory: dirName,
-        commitHash: metadata.commitHash || dirName,
-        commitAuthor: metadata.commitAuthor,
-        commitMessage: metadata.commitMessage,
-        commitDate: metadata.commitDate,
-        source: metadata.source,
-        lastEvaluated: metadata.timestamp || new Date().toISOString(),
-        evaluationCount: 1,
-        metrics: metrics, // Add averaged metrics
-    };
+  const entry = {
+    directory: dirName,
+    commitHash: metadata.commitHash || dirName,
+    commitAuthor: metadata.commitAuthor,
+    commitMessage: metadata.commitMessage,
+    commitDate: metadata.commitDate,
+    source: metadata.source,
+    lastEvaluated: metadata.timestamp || new Date().toISOString(),
+    evaluationCount: 1,
+    metrics: metrics, // Add averaged metrics
+  };
 
-    if (existingIndex >= 0) {
-        // Update existing entry
-        entry.evaluationCount = (index[existingIndex].evaluationCount || 0) + 1;
-        index[existingIndex] = entry;
-    } else {
-        // Add new entry
-        index.push(entry);
-    }
+  if (existingIndex >= 0) {
+    // Update existing entry
+    entry.evaluationCount = (index[existingIndex].evaluationCount || 0) + 1;
+    index[existingIndex] = entry;
+  } else {
+    // Add new entry
+    index.push(entry);
+  }
 
-    // Sort by commit date (newest first), then by last evaluated as tiebreaker
-    index.sort((a, b) => new Date(b.commitDate).getTime() - new Date(a.commitDate).getTime() || new Date(b.lastEvaluated).getTime() - new Date(a.lastEvaluated).getTime());
+  // Sort by commit date (newest first), then by last evaluated as tiebreaker
+  index.sort(
+    (a, b) =>
+      new Date(b.commitDate).getTime() - new Date(a.commitDate).getTime() ||
+      new Date(b.lastEvaluated).getTime() - new Date(a.lastEvaluated).getTime()
+  );
 
-    // Write JSON index
-    await fs.writeFile(indexJsonPath, JSON.stringify(index, null, 2));
+  // Write JSON index
+  await fs.writeFile(indexJsonPath, JSON.stringify(index, null, 2));
 
-    // Generate HTML index
-    await generateIndexHtml(indexHtmlPath, index);
+  // Generate HTML index
+  await generateIndexHtml(indexHtmlPath, index);
 }
 
 /**
  * Generate HTML index showing all evaluations
  */
 async function generateIndexHtml(indexPath: string, index: any[]): Promise<void> {
-    // Group commits by author
-    const byAuthor = new Map<string, any[]>();
-    index.forEach(item => {
-        const author = item.commitAuthor || 'Unknown';
-        if (!byAuthor.has(author)) {
-            byAuthor.set(author, []);
-        }
-        byAuthor.get(author)!.push(item);
-    });
-
-    // Generate author pages for each author
-    const evaluationsRoot = path.dirname(indexPath);
-    for (const [author, commits] of byAuthor.entries()) {
-        await generateAuthorPage(evaluationsRoot, author, commits);
+  // Group commits by author
+  const byAuthor = new Map<string, any[]>();
+  index.forEach((item) => {
+    const author = item.commitAuthor || 'Unknown';
+    if (!byAuthor.has(author)) {
+      byAuthor.set(author, []);
     }
+    byAuthor.get(author)!.push(item);
+  });
 
-    // Calculate overall metrics averages
-    const overallMetrics = {
-        avgQuality: 0,
-        avgComplexity: 0,
-        avgFunctionalImpact: 0,
-        avgTestCoverage: 0,
-        avgActualTime: 0,
-        totalTechDebt: 0,
+  // Generate author pages for each author
+  const evaluationsRoot = path.dirname(indexPath);
+  for (const [author, commits] of byAuthor.entries()) {
+    await generateAuthorPage(evaluationsRoot, author, commits);
+  }
+
+  // Calculate overall metrics averages
+  const overallMetrics = {
+    avgQuality: 0,
+    avgComplexity: 0,
+    avgFunctionalImpact: 0,
+    avgTestCoverage: 0,
+    avgActualTime: 0,
+    totalTechDebt: 0,
+    count: 0,
+  };
+
+  index.forEach((item) => {
+    if (item.metrics) {
+      overallMetrics.avgQuality += item.metrics.codeQuality || 0;
+      overallMetrics.avgComplexity += item.metrics.codeComplexity || 0;
+      overallMetrics.avgFunctionalImpact += item.metrics.functionalImpact || 0;
+      overallMetrics.avgTestCoverage += item.metrics.testCoverage || 0;
+      overallMetrics.avgActualTime += item.metrics.actualTimeHours || 0;
+      overallMetrics.totalTechDebt += item.metrics.technicalDebtHours || 0;
+      overallMetrics.count++;
+    }
+  });
+
+  if (overallMetrics.count > 0) {
+    overallMetrics.avgQuality = Number(
+      (overallMetrics.avgQuality / overallMetrics.count).toFixed(1)
+    );
+    overallMetrics.avgComplexity = Number(
+      (overallMetrics.avgComplexity / overallMetrics.count).toFixed(1)
+    );
+    overallMetrics.avgFunctionalImpact = Number(
+      (overallMetrics.avgFunctionalImpact / overallMetrics.count).toFixed(1)
+    );
+    overallMetrics.avgTestCoverage = Number(
+      (overallMetrics.avgTestCoverage / overallMetrics.count).toFixed(1)
+    );
+    overallMetrics.avgActualTime = Number(
+      (overallMetrics.avgActualTime / overallMetrics.count).toFixed(2)
+    );
+    overallMetrics.totalTechDebt = Number(overallMetrics.totalTechDebt.toFixed(2));
+  }
+
+  // Generate author stats section with metrics
+  const authorStatsHtml = Array.from(byAuthor.entries())
+    .sort((a, b) => b[1].length - a[1].length) // Sort by commit count
+    .map(([author, commits]) => {
+      // Calculate author's average metrics
+      const authorMetrics = {
+        quality: 0,
+        complexity: 0,
+        testCoverage: 0,
+        functionalImpact: 0,
+        actualTime: 0,
+        techDebt: 0,
         count: 0,
-    };
-
-    index.forEach(item => {
-        if (item.metrics) {
-            overallMetrics.avgQuality += item.metrics.codeQuality || 0;
-            overallMetrics.avgComplexity += item.metrics.codeComplexity || 0;
-            overallMetrics.avgFunctionalImpact += item.metrics.functionalImpact || 0;
-            overallMetrics.avgTestCoverage += item.metrics.testCoverage || 0;
-            overallMetrics.avgActualTime += item.metrics.actualTimeHours || 0;
-            overallMetrics.totalTechDebt += item.metrics.technicalDebtHours || 0;
-            overallMetrics.count++;
+      };
+      commits.forEach((c) => {
+        if (c.metrics) {
+          authorMetrics.quality += c.metrics.codeQuality || 0;
+          authorMetrics.complexity += c.metrics.codeComplexity || 0;
+          authorMetrics.testCoverage += c.metrics.testCoverage || 0;
+          authorMetrics.functionalImpact += c.metrics.functionalImpact || 0;
+          authorMetrics.actualTime += c.metrics.actualTimeHours || 0;
+          authorMetrics.techDebt += c.metrics.technicalDebtHours || 0;
+          authorMetrics.count++;
         }
-    });
+      });
 
-    if (overallMetrics.count > 0) {
-        overallMetrics.avgQuality = Number((overallMetrics.avgQuality / overallMetrics.count).toFixed(1));
-        overallMetrics.avgComplexity = Number((overallMetrics.avgComplexity / overallMetrics.count).toFixed(1));
-        overallMetrics.avgFunctionalImpact = Number((overallMetrics.avgFunctionalImpact / overallMetrics.count).toFixed(1));
-        overallMetrics.avgTestCoverage = Number((overallMetrics.avgTestCoverage / overallMetrics.count).toFixed(1));
-        overallMetrics.avgActualTime = Number((overallMetrics.avgActualTime / overallMetrics.count).toFixed(2));
-        overallMetrics.totalTechDebt = Number(overallMetrics.totalTechDebt.toFixed(2));
-    }
+      const avgQuality =
+        authorMetrics.count > 0 ? (authorMetrics.quality / authorMetrics.count).toFixed(1) : 'N/A';
+      const avgComplexity =
+        authorMetrics.count > 0
+          ? (authorMetrics.complexity / authorMetrics.count).toFixed(1)
+          : 'N/A';
+      const avgTestCoverage =
+        authorMetrics.count > 0
+          ? (authorMetrics.testCoverage / authorMetrics.count).toFixed(1)
+          : 'N/A';
+      const avgFunctionalImpact =
+        authorMetrics.count > 0
+          ? (authorMetrics.functionalImpact / authorMetrics.count).toFixed(1)
+          : 'N/A';
+      const avgActualTime =
+        authorMetrics.count > 0
+          ? (authorMetrics.actualTime / authorMetrics.count).toFixed(2)
+          : 'N/A';
+      const totalTechDebt = authorMetrics.count > 0 ? authorMetrics.techDebt.toFixed(2) : 'N/A';
 
-    // Generate author stats section with metrics
-    const authorStatsHtml = Array.from(byAuthor.entries())
-        .sort((a, b) => b[1].length - a[1].length) // Sort by commit count
-        .map(([author, commits]) => {
-            // Calculate author's average metrics
-            const authorMetrics = {
-                quality: 0,
-                complexity: 0,
-                testCoverage: 0,
-                functionalImpact: 0,
-                actualTime: 0,
-                techDebt: 0,
-                count: 0,
-            };
-            commits.forEach(c => {
-                if (c.metrics) {
-                    authorMetrics.quality += c.metrics.codeQuality || 0;
-                    authorMetrics.complexity += c.metrics.codeComplexity || 0;
-                    authorMetrics.testCoverage += c.metrics.testCoverage || 0;
-                    authorMetrics.functionalImpact += c.metrics.functionalImpact || 0;
-                    authorMetrics.actualTime += c.metrics.actualTimeHours || 0;
-                    authorMetrics.techDebt += c.metrics.technicalDebtHours || 0;
-                    authorMetrics.count++;
-                }
-            });
-
-            const avgQuality = authorMetrics.count > 0 ? (authorMetrics.quality / authorMetrics.count).toFixed(1) : 'N/A';
-            const avgComplexity = authorMetrics.count > 0 ? (authorMetrics.complexity / authorMetrics.count).toFixed(1) : 'N/A';
-            const avgTestCoverage = authorMetrics.count > 0 ? (authorMetrics.testCoverage / authorMetrics.count).toFixed(1) : 'N/A';
-            const avgFunctionalImpact = authorMetrics.count > 0 ? (authorMetrics.functionalImpact / authorMetrics.count).toFixed(1) : 'N/A';
-            const avgActualTime = authorMetrics.count > 0 ? (authorMetrics.actualTime / authorMetrics.count).toFixed(2) : 'N/A';
-            const totalTechDebt = authorMetrics.count > 0 ? authorMetrics.techDebt.toFixed(2) : 'N/A';
-
-            return `
+      return `
             <div class="author-card">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="mb-1">👤 ${author}</h6>
                         <div class="text-muted small mb-2">${commits.length} commit${commits.length > 1 ? 's' : ''}</div>
-                        ${authorMetrics.count > 0 ? `
+                        ${
+                          authorMetrics.count > 0
+                            ? `
                         <div class="metrics-mini">
                             <span class="badge bg-primary">Quality: ${avgQuality}/10</span>
                             <span class="badge bg-info">Complexity: ${avgComplexity}/10</span>
                             <span class="badge bg-success">Tests: ${avgTestCoverage}/10</span>
                         </div>
-                        ` : ''}
+                        `
+                            : ''
+                        }
                     </div>
                     <div>
                         <button class="btn btn-sm btn-outline-primary" onclick="filterByAuthor('${author.replace(/'/g, "\\'")}')">
@@ -666,9 +689,11 @@ async function generateIndexHtml(indexPath: string, index: any[]): Promise<void>
                     </div>
                 </div>
             </div>
-        `}).join('');
+        `;
+    })
+    .join('');
 
-    const html = `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -733,7 +758,9 @@ async function generateIndexHtml(indexPath: string, index: any[]): Promise<void>
                 <div class="stat-number">${byAuthor.size}</div>
                 <div class="stat-label">Authors</div>
             </div>
-            ${overallMetrics.count > 0 ? `
+            ${
+              overallMetrics.count > 0
+                ? `
             <div class="stat-card">
                 <div class="stat-number">${overallMetrics.avgQuality}</div>
                 <div class="stat-label">Avg Quality</div>
@@ -764,7 +791,9 @@ async function generateIndexHtml(indexPath: string, index: any[]): Promise<void>
                 <div class="stat-label">Total Tech Debt</div>
                 <div class="stat-mini">${overallMetrics.totalTechDebt > 0 ? 'added' : 'reduced'}</div>
             </div>
-            ` : ''}
+            `
+                : ''
+            }
         </div>
 
         <div class="search-filter-bar">
@@ -793,42 +822,51 @@ async function generateIndexHtml(indexPath: string, index: any[]): Promise<void>
                 </thead>
                 <tbody>
 ${Array.from(byAuthor.entries())
-            .sort((a, b) => b[1].length - a[1].length)
-            .map(([author, commits]) => {
-                // Sort commits by commit date (newest first)
-                commits.sort((a, b) => new Date(b.commitDate).getTime() - new Date(a.commitDate).getTime());
-                const authorMetrics = {
-                    quality: 0,
-                    complexity: 0,
-                    testCoverage: 0,
-                    functionalImpact: 0,
-                    actualTime: 0,
-                    techDebt: 0,
-                    count: 0,
-                };
-                commits.forEach(c => {
-                    if (c.metrics) {
-                        authorMetrics.quality += c.metrics.codeQuality || 0;
-                        authorMetrics.complexity += c.metrics.codeComplexity || 0;
-                        authorMetrics.testCoverage += c.metrics.testCoverage || 0;
-                        authorMetrics.functionalImpact += c.metrics.functionalImpact || 0;
-                        authorMetrics.actualTime += c.metrics.actualTimeHours || 0;
-                        authorMetrics.techDebt += c.metrics.technicalDebtHours || 0;
-                        authorMetrics.count++;
-                    }
-                });
+  .sort((a, b) => b[1].length - a[1].length)
+  .map(([author, commits]) => {
+    // Sort commits by commit date (newest first)
+    commits.sort((a, b) => new Date(b.commitDate).getTime() - new Date(a.commitDate).getTime());
+    const authorMetrics = {
+      quality: 0,
+      complexity: 0,
+      testCoverage: 0,
+      functionalImpact: 0,
+      actualTime: 0,
+      techDebt: 0,
+      count: 0,
+    };
+    commits.forEach((c) => {
+      if (c.metrics) {
+        authorMetrics.quality += c.metrics.codeQuality || 0;
+        authorMetrics.complexity += c.metrics.codeComplexity || 0;
+        authorMetrics.testCoverage += c.metrics.testCoverage || 0;
+        authorMetrics.functionalImpact += c.metrics.functionalImpact || 0;
+        authorMetrics.actualTime += c.metrics.actualTimeHours || 0;
+        authorMetrics.techDebt += c.metrics.technicalDebtHours || 0;
+        authorMetrics.count++;
+      }
+    });
 
-                const avgQuality = authorMetrics.count > 0 ? (authorMetrics.quality / authorMetrics.count).toFixed(1) : 'N/A';
-                const avgComplexity = authorMetrics.count > 0 ? (authorMetrics.complexity / authorMetrics.count).toFixed(1) : 'N/A';
-                const avgTestCoverage = authorMetrics.count > 0 ? (authorMetrics.testCoverage / authorMetrics.count).toFixed(1) : 'N/A';
-                const avgFunctionalImpact = authorMetrics.count > 0 ? (authorMetrics.functionalImpact / authorMetrics.count).toFixed(1) : 'N/A';
-                const avgActualTime = authorMetrics.count > 0 ? (authorMetrics.actualTime / authorMetrics.count).toFixed(2) : 'N/A';
-                const totalTechDebt = authorMetrics.count > 0 ? authorMetrics.techDebt.toFixed(2) : 'N/A';
+    const avgQuality =
+      authorMetrics.count > 0 ? (authorMetrics.quality / authorMetrics.count).toFixed(1) : 'N/A';
+    const avgComplexity =
+      authorMetrics.count > 0 ? (authorMetrics.complexity / authorMetrics.count).toFixed(1) : 'N/A';
+    const avgTestCoverage =
+      authorMetrics.count > 0
+        ? (authorMetrics.testCoverage / authorMetrics.count).toFixed(1)
+        : 'N/A';
+    const avgFunctionalImpact =
+      authorMetrics.count > 0
+        ? (authorMetrics.functionalImpact / authorMetrics.count).toFixed(1)
+        : 'N/A';
+    const avgActualTime =
+      authorMetrics.count > 0 ? (authorMetrics.actualTime / authorMetrics.count).toFixed(2) : 'N/A';
+    const totalTechDebt = authorMetrics.count > 0 ? authorMetrics.techDebt.toFixed(2) : 'N/A';
 
-                const authorSlug = author.toLowerCase().replace(/[^a-z0-9]/g, '-');
-                const authorPageUrl = `author-${authorSlug}.html`;
+    const authorSlug = author.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const authorPageUrl = `author-${authorSlug}.html`;
 
-                return `
+    return `
                     <tr>
                         <td>👤 ${author}</td>
                         <td class="metric-cell">${commits.length}</td>
@@ -840,7 +878,8 @@ ${Array.from(byAuthor.entries())
                         <td class="metric-cell">${totalTechDebt !== 'N/A' ? `<span class="metric-${parseFloat(totalTechDebt) > 0 ? 'bad' : parseFloat(totalTechDebt) < 0 ? 'good' : 'medium'}">${parseFloat(totalTechDebt) > 0 ? '+' : ''}${totalTechDebt}h</span>` : 'N/A'}</td>
                         <td><a href="${authorPageUrl}" class="btn btn-sm btn-outline-primary">View Dashboard</a></td>
                     </tr>`;
-            }).join('')}
+  })
+  .join('')}
                 </tbody>
             </table>
         </div>
@@ -867,15 +906,21 @@ ${Array.from(byAuthor.entries())
                         </tr>
                     </thead>
                     <tbody id="commitList">
-${index.map(item => {
-                const metrics = item.metrics || {};
-                const qualityColor = metrics.codeQuality >= 7 ? 'good' : metrics.codeQuality >= 4 ? 'medium' : 'bad';
-                const complexityColor = metrics.codeComplexity <= 3 ? 'good' : metrics.codeComplexity <= 6 ? 'medium' : 'bad';
-                const testsColor = metrics.testCoverage >= 7 ? 'good' : metrics.testCoverage >= 4 ? 'medium' : 'bad';
-                const impactColor = metrics.functionalImpact >= 7 ? 'bad' : metrics.functionalImpact >= 4 ? 'medium' : 'good';
-                const debtColor = metrics.technicalDebtHours > 0 ? 'bad' : metrics.technicalDebtHours < 0 ? 'good' : 'medium';
+${index
+  .map((item) => {
+    const metrics = item.metrics || {};
+    const qualityColor =
+      metrics.codeQuality >= 7 ? 'good' : metrics.codeQuality >= 4 ? 'medium' : 'bad';
+    const complexityColor =
+      metrics.codeComplexity <= 3 ? 'good' : metrics.codeComplexity <= 6 ? 'medium' : 'bad';
+    const testsColor =
+      metrics.testCoverage >= 7 ? 'good' : metrics.testCoverage >= 4 ? 'medium' : 'bad';
+    const impactColor =
+      metrics.functionalImpact >= 7 ? 'bad' : metrics.functionalImpact >= 4 ? 'medium' : 'good';
+    const debtColor =
+      metrics.technicalDebtHours > 0 ? 'bad' : metrics.technicalDebtHours < 0 ? 'good' : 'medium';
 
-                return `
+    return `
                         <tr data-source="${item.source || 'unknown'}" data-author="${item.commitAuthor || ''}" data-message="${(item.commitMessage || '').toLowerCase()}" data-hash="${item.commitHash}">
                             <td>
                                 <span class="commit-hash">${item.commitHash?.substring(0, 8) || item.directory}</span>
@@ -896,7 +941,8 @@ ${index.map(item => {
                             <td class="metric-cell ${item.metrics ? `metric-${debtColor}` : ''}">${item.metrics ? `${metrics.technicalDebtHours > 0 ? '+' : ''}${metrics.technicalDebtHours}h` : 'N/A'}</td>
                             <td><a href="${item.directory}/report-enhanced.html" class="btn btn-primary btn-sm">View</a></td>
                         </tr>`;
-            }).join('')}
+  })
+  .join('')}
                     </tbody>
                 </table>
             </div>
@@ -944,7 +990,7 @@ ${index.map(item => {
 </body>
 </html>`;
 
-    await fs.writeFile(indexPath, html);
+  await fs.writeFile(indexPath, html);
 }
 
 /**
@@ -956,75 +1002,82 @@ ${index.map(item => {
  *   --branch develop --count 5 → "branch-develop-last-5"
  */
 export function generateBatchIdentifier(options: {
-    since?: string;
-    until?: string;
-    count?: number;
-    branch?: string;
+  since?: string;
+  until?: string;
+  count?: number;
+  branch?: string;
 }): string {
-    const parts: string[] = [];
+  const parts: string[] = [];
 
-    if (options.branch && options.branch !== 'HEAD') {
-        parts.push(`branch-${options.branch.replace(/[^a-zA-Z0-9-]/g, '_')}`);
-    }
+  if (options.branch && options.branch !== 'HEAD') {
+    parts.push(`branch-${options.branch.replace(/[^a-zA-Z0-9-]/g, '_')}`);
+  }
 
-    if (options.since && options.until) {
-        parts.push(`${options.since}_to_${options.until}`);
-    } else if (options.since) {
-        parts.push(`since-${options.since}`);
-    } else if (options.until) {
-        parts.push(`until-${options.until}`);
-    } else if (options.count) {
-        parts.push(`last-${options.count}`);
-    }
+  if (options.since && options.until) {
+    parts.push(`${options.since}_to_${options.until}`);
+  } else if (options.since) {
+    parts.push(`since-${options.since}`);
+  } else if (options.until) {
+    parts.push(`until-${options.until}`);
+  } else if (options.count) {
+    parts.push(`last-${options.count}`);
+  }
 
-    return parts.length > 0 ? parts.join('-') : 'batch';
+  return parts.length > 0 ? parts.join('-') : 'batch';
 }
 
 /**
  * Generate author-specific page with their commits and dashboard
  */
 async function generateAuthorPage(
-    evaluationsRoot: string,
-    author: string,
-    commits: any[]
+  evaluationsRoot: string,
+  author: string,
+  commits: any[]
 ): Promise<void> {
-    const authorSlug = author.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const authorPagePath = path.join(evaluationsRoot, `author-${authorSlug}.html`);
+  const authorSlug = author.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  const authorPagePath = path.join(evaluationsRoot, `author-${authorSlug}.html`);
 
-    // Calculate author metrics
-    const authorMetrics = {
-        quality: 0,
-        complexity: 0,
-        testCoverage: 0,
-        functionalImpact: 0,
-        actualTime: 0,
-        techDebt: 0,
-        count: 0,
-    };
+  // Calculate author metrics
+  const authorMetrics = {
+    quality: 0,
+    complexity: 0,
+    testCoverage: 0,
+    functionalImpact: 0,
+    actualTime: 0,
+    techDebt: 0,
+    count: 0,
+  };
 
-    // Sort commits by commit date (newest first)
-    commits.sort((a, b) => new Date(b.commitDate).getTime() - new Date(a.commitDate).getTime());
+  // Sort commits by commit date (newest first)
+  commits.sort((a, b) => new Date(b.commitDate).getTime() - new Date(a.commitDate).getTime());
 
-    commits.forEach(c => {
-        if (c.metrics) {
-            authorMetrics.quality += c.metrics.codeQuality || 0;
-            authorMetrics.complexity += c.metrics.codeComplexity || 0;
-            authorMetrics.testCoverage += c.metrics.testCoverage || 0;
-            authorMetrics.functionalImpact += c.metrics.functionalImpact || 0;
-            authorMetrics.actualTime += c.metrics.actualTimeHours || 0;
-            authorMetrics.techDebt += c.metrics.technicalDebtHours || 0;
-            authorMetrics.count++;
-        }
-    });
+  commits.forEach((c) => {
+    if (c.metrics) {
+      authorMetrics.quality += c.metrics.codeQuality || 0;
+      authorMetrics.complexity += c.metrics.codeComplexity || 0;
+      authorMetrics.testCoverage += c.metrics.testCoverage || 0;
+      authorMetrics.functionalImpact += c.metrics.functionalImpact || 0;
+      authorMetrics.actualTime += c.metrics.actualTimeHours || 0;
+      authorMetrics.techDebt += c.metrics.technicalDebtHours || 0;
+      authorMetrics.count++;
+    }
+  });
 
-    const avgQuality = authorMetrics.count > 0 ? (authorMetrics.quality / authorMetrics.count).toFixed(1) : 'N/A';
-    const avgComplexity = authorMetrics.count > 0 ? (authorMetrics.complexity / authorMetrics.count).toFixed(1) : 'N/A';
-    const avgTestCoverage = authorMetrics.count > 0 ? (authorMetrics.testCoverage / authorMetrics.count).toFixed(1) : 'N/A';
-    const avgFunctionalImpact = authorMetrics.count > 0 ? (authorMetrics.functionalImpact / authorMetrics.count).toFixed(1) : 'N/A';
-    const avgActualTime = authorMetrics.count > 0 ? (authorMetrics.actualTime / authorMetrics.count).toFixed(2) : 'N/A';
-    const totalTechDebt = authorMetrics.count > 0 ? authorMetrics.techDebt.toFixed(2) : 'N/A';
+  const avgQuality =
+    authorMetrics.count > 0 ? (authorMetrics.quality / authorMetrics.count).toFixed(1) : 'N/A';
+  const avgComplexity =
+    authorMetrics.count > 0 ? (authorMetrics.complexity / authorMetrics.count).toFixed(1) : 'N/A';
+  const avgTestCoverage =
+    authorMetrics.count > 0 ? (authorMetrics.testCoverage / authorMetrics.count).toFixed(1) : 'N/A';
+  const avgFunctionalImpact =
+    authorMetrics.count > 0
+      ? (authorMetrics.functionalImpact / authorMetrics.count).toFixed(1)
+      : 'N/A';
+  const avgActualTime =
+    authorMetrics.count > 0 ? (authorMetrics.actualTime / authorMetrics.count).toFixed(2) : 'N/A';
+  const totalTechDebt = authorMetrics.count > 0 ? authorMetrics.techDebt.toFixed(2) : 'N/A';
 
-    const html = `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1130,15 +1183,21 @@ async function generateAuthorPage(
                         </tr>
                     </thead>
                     <tbody>
-${commits.map(item => {
-        const metrics = item.metrics || {};
-        const qualityColor = metrics.codeQuality >= 7 ? 'good' : metrics.codeQuality >= 4 ? 'medium' : 'bad';
-        const complexityColor = metrics.codeComplexity <= 3 ? 'good' : metrics.codeComplexity <= 6 ? 'medium' : 'bad';
-        const testsColor = metrics.testCoverage >= 7 ? 'good' : metrics.testCoverage >= 4 ? 'medium' : 'bad';
-        const impactColor = metrics.functionalImpact >= 7 ? 'bad' : metrics.functionalImpact >= 4 ? 'medium' : 'good';
-        const debtColor = metrics.technicalDebtHours > 0 ? 'bad' : metrics.technicalDebtHours < 0 ? 'good' : 'medium';
+${commits
+  .map((item) => {
+    const metrics = item.metrics || {};
+    const qualityColor =
+      metrics.codeQuality >= 7 ? 'good' : metrics.codeQuality >= 4 ? 'medium' : 'bad';
+    const complexityColor =
+      metrics.codeComplexity <= 3 ? 'good' : metrics.codeComplexity <= 6 ? 'medium' : 'bad';
+    const testsColor =
+      metrics.testCoverage >= 7 ? 'good' : metrics.testCoverage >= 4 ? 'medium' : 'bad';
+    const impactColor =
+      metrics.functionalImpact >= 7 ? 'bad' : metrics.functionalImpact >= 4 ? 'medium' : 'good';
+    const debtColor =
+      metrics.technicalDebtHours > 0 ? 'bad' : metrics.technicalDebtHours < 0 ? 'good' : 'medium';
 
-        return `
+    return `
                         <tr>
                             <td>
                                 <span class="commit-hash">${item.commitHash?.substring(0, 8) || item.directory}</span>
@@ -1158,7 +1217,8 @@ ${commits.map(item => {
                             <td class="metric-cell ${item.metrics ? `metric-${debtColor}` : ''}">${item.metrics ? `${metrics.technicalDebtHours > 0 ? '+' : ''}${metrics.technicalDebtHours}h` : 'N/A'}</td>
                             <td><a href="${item.directory}/report-enhanced.html" class="btn btn-primary btn-sm">View</a></td>
                         </tr>`;
-    }).join('')}
+  })
+  .join('')}
                     </tbody>
                 </table>
             </div>
@@ -1169,71 +1229,81 @@ ${commits.map(item => {
 </body>
 </html>`;
 
-    await fs.writeFile(authorPagePath, html);
+  await fs.writeFile(authorPagePath, html);
 }
 
 /**
  * Build the index URL for cross-platform access
  */
 export function buildIndexUrl(): string {
-    const indexPath = path.join(process.cwd(), '.evaluated-commits', 'index.html');
-    const normalizedPath = indexPath.replace(/\\/g, '/');
-    return process.platform === 'win32'
-        ? `file:///${normalizedPath}`
-        : `file://${normalizedPath}`;
+  const indexPath = path.join(process.cwd(), '.evaluated-commits', 'index.html');
+  const normalizedPath = indexPath.replace(/\\/g, '/');
+  return process.platform === 'win32' ? `file:///${normalizedPath}` : `file://${normalizedPath}`;
 }
 
 /**
  * Print completion message for evaluate command (single commit)
  */
 export function printEvaluateCompletionMessage(outputDir: string): void {
-    try {
-        const chalk = require('chalk').default;
+  try {
+    const chalk = require('chalk').default;
 
-        console.log(chalk.green(`\n✅ Evaluation complete!`));
-        console.log(chalk.cyan(`📁 Output directory: ${chalk.bold(outputDir)}`));
-        console.log(chalk.white(`   📄 report-enhanced.html  - 🌟 Conversation Timeline (Interactive)`));
-        console.log(chalk.white(`   📝 conversation.md       - 🌟 Markdown Transcript`));
-        console.log(chalk.gray(`   📄 report.html           - Standard HTML report`));
-        console.log(chalk.gray(`   📋 results.json          - Full JSON results`));
-        console.log(chalk.gray(`   📝 commit.diff           - Original diff`));
-        console.log(chalk.gray(`   📊 summary.txt           - Quick summary`));
-        console.log(chalk.yellow(`\n💡 Open ${chalk.bold('report-enhanced.html')} for interactive view or ${chalk.bold('conversation.md')} for transcript!\n`));
+    console.log(chalk.green(`\n✅ Evaluation complete!`));
+    console.log(chalk.cyan(`📁 Output directory: ${chalk.bold(outputDir)}`));
+    console.log(
+      chalk.white(`   📄 report-enhanced.html  - 🌟 Conversation Timeline (Interactive)`)
+    );
+    console.log(chalk.white(`   📝 conversation.md       - 🌟 Markdown Transcript`));
+    console.log(chalk.gray(`   📄 report.html           - Standard HTML report`));
+    console.log(chalk.gray(`   📋 results.json          - Full JSON results`));
+    console.log(chalk.gray(`   📝 commit.diff           - Original diff`));
+    console.log(chalk.gray(`   📊 summary.txt           - Quick summary`));
+    console.log(
+      chalk.yellow(
+        `\n💡 Open ${chalk.bold('report-enhanced.html')} for interactive view or ${chalk.bold('conversation.md')} for transcript!\n`
+      )
+    );
 
-        const indexUrl = buildIndexUrl();
-        console.log(chalk.cyan(`\n🌐 View all evaluations: ${indexUrl}\n`));
-    } catch (e) {
-        // Fallback without chalk if it's not available
-        console.log(`\n✅ Evaluation complete!`);
-        console.log(`📁 Output directory: ${outputDir}`);
-        console.log(`   📄 report-enhanced.html  - 🌟 Conversation Timeline (Interactive)`);
-        console.log(`   📝 conversation.md       - 🌟 Markdown Transcript`);
-        console.log(`   📄 report.html           - Standard HTML report`);
-        console.log(`   📋 results.json          - Full JSON results`);
-        console.log(`   📝 commit.diff           - Original diff`);
-        console.log(`   📊 summary.txt           - Quick summary`);
-        console.log(`\n💡 Open report-enhanced.html for interactive view or conversation.md for transcript!\n`);
+    const indexUrl = buildIndexUrl();
+    console.log(chalk.cyan(`\n🌐 View all evaluations: ${indexUrl}\n`));
+  } catch (e) {
+    // Fallback without chalk if it's not available
+    console.log(`\n✅ Evaluation complete!`);
+    console.log(`📁 Output directory: ${outputDir}`);
+    console.log(`   📄 report-enhanced.html  - 🌟 Conversation Timeline (Interactive)`);
+    console.log(`   📝 conversation.md       - 🌟 Markdown Transcript`);
+    console.log(`   📄 report.html           - Standard HTML report`);
+    console.log(`   📋 results.json          - Full JSON results`);
+    console.log(`   📝 commit.diff           - Original diff`);
+    console.log(`   📊 summary.txt           - Quick summary`);
+    console.log(
+      `\n💡 Open report-enhanced.html for interactive view or conversation.md for transcript!\n`
+    );
 
-        const indexUrl = buildIndexUrl();
-        console.log(`\n🌐 View all evaluations: ${indexUrl}\n`);
-    }
+    const indexUrl = buildIndexUrl();
+    console.log(`\n🌐 View all evaluations: ${indexUrl}\n`);
+  }
 }
 
 /**
  * Print completion message for batch command (multiple commits)
  */
-export function printBatchCompletionMessage(summary: { total: number; complete: number; failed: number }): void {
-    console.log(`${'='.repeat(80)}`);
-    console.log('✅ CodeWave analysis complete!');
-    console.log(`${'='.repeat(80)}\n`);
-    console.log(`📊 Summary:`);
-    console.log(`   Total commits: ${summary.total}`);
-    console.log(`   Successful: ${summary.complete}`);
-    console.log(`   Failed: ${summary.failed}`);
-    console.log(`\n📁 All evaluations saved to: .evaluated-commits/`);
-    console.log(`   🌐 index.html          - Master index of all evaluations`);
-    console.log(`   📂 [commit-hash]/      - Individual commit evaluations`);
+export function printBatchCompletionMessage(summary: {
+  total: number;
+  complete: number;
+  failed: number;
+}): void {
+  console.log(`${'='.repeat(80)}`);
+  console.log('✅ CodeWave analysis complete!');
+  console.log(`${'='.repeat(80)}\n`);
+  console.log(`📊 Summary:`);
+  console.log(`   Total commits: ${summary.total}`);
+  console.log(`   Successful: ${summary.complete}`);
+  console.log(`   Failed: ${summary.failed}`);
+  console.log(`\n📁 All evaluations saved to: .evaluated-commits/`);
+  console.log(`   🌐 index.html          - Master index of all evaluations`);
+  console.log(`   📂 [commit-hash]/      - Individual commit evaluations`);
 
-    const indexUrl = buildIndexUrl();
-    console.log(`\n💡 Open index: ${indexUrl}\n`);
+  const indexUrl = buildIndexUrl();
+  console.log(`\n💡 Open index: ${indexUrl}\n`);
 }

@@ -13,6 +13,79 @@
  * All agents MUST return scores for all 7 pillars and ONLY these pillars
  */
 export const SEVEN_PILLARS = [
+  'functionalImpact',
+  'idealTimeHours',
+  'testCoverage',
+  'codeQuality',
+  'codeComplexity',
+  'actualTimeHours',
+  'technicalDebtHours',
+] as const;
+
+export type PillarName = (typeof SEVEN_PILLARS)[number];
+
+export interface AgentWeights {
+  functionalImpact: number;
+  idealTimeHours: number;
+  testCoverage: number;
+  codeQuality: number;
+  codeComplexity: number;
+  actualTimeHours: number;
+  technicalDebtHours: number;
+}
+
+export const AGENT_EXPERTISE_WEIGHTS: Record<string, AgentWeights> = {
+  'business-analyst': {
+    functionalImpact: 0.435, // PRIMARY (43.5%) - Business impact expert
+    idealTimeHours: 0.417, // PRIMARY (41.7%) - Requirements estimation expert
+    testCoverage: 0.12, // TERTIARY (12%) - Limited testing perspective
+    codeQuality: 0.083, // TERTIARY (8.3%) - Limited code perspective
+    codeComplexity: 0.083, // TERTIARY (8.3%) - Limited complexity insight
+    actualTimeHours: 0.136, // TERTIARY (13.6%) - Observes implementation time
+    technicalDebtHours: 0.13, // TERTIARY (13%) - Limited debt assessment
+  },
+  sdet: {
+    functionalImpact: 0.13, // TERTIARY (13%) - Validates test automation strategy
+    idealTimeHours: 0.083, // TERTIARY (8.3%) - Limited estimation insight
+    testCoverage: 0.4, // PRIMARY (40%) - Test automation & framework expert
+    codeQuality: 0.167, // SECONDARY (16.7%) - Reviews test code quality
+    codeComplexity: 0.125, // TERTIARY (12.5%) - Understands test framework complexity
+    actualTimeHours: 0.091, // TERTIARY (9.1%) - Limited implementation insight
+    technicalDebtHours: 0.13, // TERTIARY (13%) - Identifies test automation debt
+  },
+  'developer-author': {
+    functionalImpact: 0.13, // TERTIARY (13%) - Implements features
+    idealTimeHours: 0.167, // SECONDARY (16.7%) - Estimates effort
+    testCoverage: 0.12, // TERTIARY (12%) - Writes tests
+    codeQuality: 0.125, // TERTIARY (12.5%) - Authors code
+    codeComplexity: 0.167, // SECONDARY (16.7%) - Implements complexity
+    actualTimeHours: 0.455, // PRIMARY (45.5%) - Knows actual time spent
+    technicalDebtHours: 0.13, // TERTIARY (13%) - May introduce debt
+  },
+  'senior-architect': {
+    functionalImpact: 0.174, // SECONDARY (17.4%) - Designs architecture
+    idealTimeHours: 0.208, // SECONDARY (20.8%) - Architectural estimation
+    testCoverage: 0.16, // SECONDARY (16%) - Designs testable systems
+    codeQuality: 0.208, // SECONDARY (20.8%) - Sets quality standards
+    codeComplexity: 0.417, // PRIMARY (41.7%) - Complexity expert
+    actualTimeHours: 0.182, // SECONDARY (18.2%) - Tracks team velocity
+    technicalDebtHours: 0.435, // PRIMARY (43.5%) - Technical debt expert
+  },
+  'developer-reviewer': {
+    functionalImpact: 0.13, // TERTIARY (13%) - Reviews functionality
+    idealTimeHours: 0.125, // TERTIARY (12.5%) - Limited estimation insight
+    testCoverage: 0.2, // SECONDARY (20%) - Reviews test quality
+    codeQuality: 0.417, // PRIMARY (41.7%) - Code quality expert
+    codeComplexity: 0.208, // SECONDARY (20.8%) - Reviews complexity
+    actualTimeHours: 0.136, // TERTIARY (13.6%) - Observes PR scope
+    technicalDebtHours: 0.174, // SECONDARY (17.4%) - Identifies code debt
+  },
+};
+
+// Validation: Each pillar's weights should sum to 1.0 (allow 0.001 tolerance for rounding)
+export function validateWeights(): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const pillars: (keyof AgentWeights)[] = [
     'functionalImpact',
     'idealTimeHours',
     'testCoverage',
@@ -20,136 +93,63 @@ export const SEVEN_PILLARS = [
     'codeComplexity',
     'actualTimeHours',
     'technicalDebtHours',
-] as const;
+  ];
 
-export type PillarName = typeof SEVEN_PILLARS[number];
+  for (const pillar of pillars) {
+    const sum = Object.values(AGENT_EXPERTISE_WEIGHTS).reduce(
+      (total, weights) => total + weights[pillar],
+      0
+    );
 
-export interface AgentWeights {
-    functionalImpact: number;
-    idealTimeHours: number;
-    testCoverage: number;
-    codeQuality: number;
-    codeComplexity: number;
-    actualTimeHours: number;
-    technicalDebtHours: number;
-}
-
-export const AGENT_EXPERTISE_WEIGHTS: Record<string, AgentWeights> = {
-    'business-analyst': {
-        functionalImpact: 0.435,    // PRIMARY (43.5%) - Business impact expert
-        idealTimeHours: 0.417,      // PRIMARY (41.7%) - Requirements estimation expert
-        testCoverage: 0.120,        // TERTIARY (12%) - Limited testing perspective
-        codeQuality: 0.083,         // TERTIARY (8.3%) - Limited code perspective
-        codeComplexity: 0.083,      // TERTIARY (8.3%) - Limited complexity insight
-        actualTimeHours: 0.136,     // TERTIARY (13.6%) - Observes implementation time
-        technicalDebtHours: 0.130,  // TERTIARY (13%) - Limited debt assessment
-    },
-    'sdet': {
-        functionalImpact: 0.130,    // TERTIARY (13%) - Validates test automation strategy
-        idealTimeHours: 0.083,      // TERTIARY (8.3%) - Limited estimation insight
-        testCoverage: 0.400,        // PRIMARY (40%) - Test automation & framework expert
-        codeQuality: 0.167,         // SECONDARY (16.7%) - Reviews test code quality
-        codeComplexity: 0.125,      // TERTIARY (12.5%) - Understands test framework complexity
-        actualTimeHours: 0.091,     // TERTIARY (9.1%) - Limited implementation insight
-        technicalDebtHours: 0.130,  // TERTIARY (13%) - Identifies test automation debt
-    },
-    'developer-author': {
-        functionalImpact: 0.130,    // TERTIARY (13%) - Implements features
-        idealTimeHours: 0.167,      // SECONDARY (16.7%) - Estimates effort
-        testCoverage: 0.120,        // TERTIARY (12%) - Writes tests
-        codeQuality: 0.125,         // TERTIARY (12.5%) - Authors code
-        codeComplexity: 0.167,      // SECONDARY (16.7%) - Implements complexity
-        actualTimeHours: 0.455,     // PRIMARY (45.5%) - Knows actual time spent
-        technicalDebtHours: 0.130,  // TERTIARY (13%) - May introduce debt
-    },
-    'senior-architect': {
-        functionalImpact: 0.174,    // SECONDARY (17.4%) - Designs architecture
-        idealTimeHours: 0.208,      // SECONDARY (20.8%) - Architectural estimation
-        testCoverage: 0.160,        // SECONDARY (16%) - Designs testable systems
-        codeQuality: 0.208,         // SECONDARY (20.8%) - Sets quality standards
-        codeComplexity: 0.417,      // PRIMARY (41.7%) - Complexity expert
-        actualTimeHours: 0.182,     // SECONDARY (18.2%) - Tracks team velocity
-        technicalDebtHours: 0.435,  // PRIMARY (43.5%) - Technical debt expert
-    },
-    'developer-reviewer': {
-        functionalImpact: 0.130,    // TERTIARY (13%) - Reviews functionality
-        idealTimeHours: 0.125,      // TERTIARY (12.5%) - Limited estimation insight
-        testCoverage: 0.200,        // SECONDARY (20%) - Reviews test quality
-        codeQuality: 0.417,         // PRIMARY (41.7%) - Code quality expert
-        codeComplexity: 0.208,      // SECONDARY (20.8%) - Reviews complexity
-        actualTimeHours: 0.136,     // TERTIARY (13.6%) - Observes PR scope
-        technicalDebtHours: 0.174,  // SECONDARY (17.4%) - Identifies code debt
-    },
-};
-
-// Validation: Each pillar's weights should sum to 1.0 (allow 0.001 tolerance for rounding)
-export function validateWeights(): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-    const pillars: (keyof AgentWeights)[] = [
-        'functionalImpact',
-        'idealTimeHours',
-        'testCoverage',
-        'codeQuality',
-        'codeComplexity',
-        'actualTimeHours',
-        'technicalDebtHours',
-    ];
-
-    for (const pillar of pillars) {
-        const sum = Object.values(AGENT_EXPERTISE_WEIGHTS).reduce(
-            (total, weights) => total + weights[pillar],
-            0
-        );
-
-        if (Math.abs(sum - 1.0) > 0.001) {
-            errors.push(`${pillar}: weights sum to ${sum.toFixed(3)} (expected 1.0)`);
-        }
+    if (Math.abs(sum - 1.0) > 0.001) {
+      errors.push(`${pillar}: weights sum to ${sum.toFixed(3)} (expected 1.0)`);
     }
+  }
 
-    return {
-        valid: errors.length === 0,
-        errors,
-    };
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
 }
 
 // Helper: Get agent's weight for a specific pillar
 export function getAgentWeight(agentName: string, pillar: keyof AgentWeights): number {
-    const weights = AGENT_EXPERTISE_WEIGHTS[agentName];
-    if (!weights) {
-        console.warn(`Unknown agent: ${agentName}, using equal weight`);
-        return 0.2; // Fallback: equal weight across 5 agents
-    }
-    return weights[pillar];
+  const weights = AGENT_EXPERTISE_WEIGHTS[agentName];
+  if (!weights) {
+    console.warn(`Unknown agent: ${agentName}, using equal weight`);
+    return 0.2; // Fallback: equal weight across 5 agents
+  }
+  return weights[pillar];
 }
 
 // Helper: Get all agents' weights for a specific pillar
 export function getPillarWeights(pillar: keyof AgentWeights): Record<string, number> {
-    const result: Record<string, number> = {};
-    for (const [agentName, weights] of Object.entries(AGENT_EXPERTISE_WEIGHTS)) {
-        result[agentName] = weights[pillar];
-    }
-    return result;
+  const result: Record<string, number> = {};
+  for (const [agentName, weights] of Object.entries(AGENT_EXPERTISE_WEIGHTS)) {
+    result[agentName] = weights[pillar];
+  }
+  return result;
 }
 
 // Weighted average calculation
 export function calculateWeightedAverage(
-    scores: Array<{ agentName: string; score: number }>,
-    pillar: keyof AgentWeights
+  scores: Array<{ agentName: string; score: number }>,
+  pillar: keyof AgentWeights
 ): number {
-    let weightedSum = 0;
-    let totalWeight = 0;
+  let weightedSum = 0;
+  let totalWeight = 0;
 
-    for (const { agentName, score } of scores) {
-        const weight = getAgentWeight(agentName, pillar);
-        weightedSum += score * weight;
-        totalWeight += weight;
-    }
+  for (const { agentName, score } of scores) {
+    const weight = getAgentWeight(agentName, pillar);
+    weightedSum += score * weight;
+    totalWeight += weight;
+  }
 
-    // Avoid division by zero
-    if (totalWeight === 0) {
-        console.warn(`Total weight is 0 for pillar ${pillar}, returning average`);
-        return scores.reduce((sum, s) => sum + s.score, 0) / scores.length;
-    }
+  // Avoid division by zero
+  if (totalWeight === 0) {
+    console.warn(`Total weight is 0 for pillar ${pillar}, returning average`);
+    return scores.reduce((sum, s) => sum + s.score, 0) / scores.length;
+  }
 
-    return weightedSum / totalWeight;
+  return weightedSum / totalWeight;
 }

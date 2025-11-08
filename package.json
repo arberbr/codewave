@@ -1,33 +1,45 @@
 {
-  "name": "codewave",
+  "name": "@techdebtgpt/codewave",
   "version": "0.0.1",
   "description": "CodeWave - AI-Powered Commit Intelligence. Multi-agent system for comprehensive code quality evaluation using 7-pillar methodology.",
   "main": "dist/index.js",
+  "types": "dist/src/index.d.ts",
+  "typings": "dist/src/index.d.ts",
   "scripts": {
     "start": "node dist/index.js",
     "build": "tsc",
+    "build:watch": "tsc --watch",
     "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
     "prettier": "prettier --write '**/*.{ts,js,json,md}'",
+    "prettier:check": "prettier --check '**/*.{ts,js,json,md}'",
+    "test": "echo 'Tests not configured yet. Run: npm run build && npm run lint'",
     "docs": "echo 'CodeWave Documentation' && echo '' && echo 'Start at: docs/INDEX.md' && echo 'Main docs: README.md' && echo '' && ls -lah docs/*.md | awk '{print $9, \"(\" $5 \")\"}'",
     "docs:readme": "echo 'Main Documentation: README.md'",
     "docs:quick-ref": "cat docs/QUICK_REFERENCE.md | head -50",
     "docs:cli": "cat docs/CLI.md | head -100",
     "docs:api": "cat docs/API.md | head -100",
-    "test": "echo 'No tests configured'",
-    "prepublishOnly": "npm run build && npm run lint",
-    "prepack": "npm run build"
+    "validate:publish": "npm run build && npm run lint && npm run prettier:check",
+    "prepublishOnly": "npm run validate:publish",
+    "prepack": "npm run build",
+    "postpack": "echo '✅ Package created successfully'"
   },
   "bin": {
-    "codewave": "cli/index.js"
+    "@techdebtgpt/codewave": "cli/index.js"
   },
   "type": "commonjs",
   "devDependencies": {
     "@types/node": "^20.19.24",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.0.0",
-    "prettier": "^2.5.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.0",
     "typescript": "^5.9.3"
   },
   "keywords": [
+    "@techdebtgpt/codewave",
     "codewave",
     "commit-intelligence",
     "ai-code-review",
@@ -36,7 +48,17 @@
     "commit-evaluation",
     "7-pillar-methodology",
     "langchain",
-    "langgraph"
+    "langgraph",
+    "ai-agents",
+    "git-analysis",
+    "technical-debt",
+    "code-metrics",
+    "code-review-automation",
+    "html-reports",
+    "typescript",
+    "claude",
+    "openai",
+    "gemini"
   ],
   "author": "TechDebtGPT",
   "license": "Apache-2.0",

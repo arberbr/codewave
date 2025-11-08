@@ -1,4 +1,8 @@
-export function parseCommitMessage(commitMessage: string): { type: string; scope?: string; subject: string } {
+export function parseCommitMessage(commitMessage: string): {
+  type: string;
+  scope?: string;
+  subject: string;
+} {
   const commitRegex = /^(?<type>\w+)(\((?<scope>[\w\s$.\-]*)\))?: (?<subject>.*)$/;
   const match = commitMessage.match(commitRegex);
 
@@ -19,7 +23,11 @@ export function isCommitMessageValid(commitMessage: string): boolean {
   return validTypes.includes(type);
 }
 
-export function formatCommitMessage(commit: { type: string; scope?: string; subject: string }): string {
+export function formatCommitMessage(commit: {
+  type: string;
+  scope?: string;
+  subject: string;
+}): string {
   const { type, scope, subject } = commit;
   return scope ? `${type}(${scope}): ${subject}` : `${type}: ${subject}`;
 }

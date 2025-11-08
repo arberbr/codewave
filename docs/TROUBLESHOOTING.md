@@ -23,16 +23,19 @@ command not found: codewave
 ```
 
 #### Cause
+
 CodeWave is not installed or not in PATH.
 
 #### Solution
 
 **Option 1: Install Globally**
+
 ```bash
 npm install -g codewave
 ```
 
 **Option 2: Install Locally**
+
 ```bash
 npm install codewave
 # Run with npx
@@ -40,6 +43,7 @@ npx codewave evaluate HEAD
 ```
 
 **Option 3: Check Installation**
+
 ```bash
 # Check if installed
 which codewave
@@ -60,11 +64,13 @@ Error: EACCES: permission denied
 ```
 
 #### Cause
+
 Insufficient permissions for npm global installation.
 
 #### Solution
 
 **Option 1: Fix npm Permissions**
+
 ```bash
 mkdir ~/.npm-global
 npm config set prefix '~/.npm-global'
@@ -76,6 +82,7 @@ source ~/.bashrc
 ```
 
 **Option 2: Use sudo (Not Recommended)**
+
 ```bash
 sudo npm install -g codewave
 ```
@@ -113,6 +120,7 @@ Please run: codewave config
 ```
 
 #### Cause
+
 First-time setup not completed.
 
 #### Solution
@@ -137,11 +145,13 @@ Error: Invalid configuration format
 ```
 
 #### Cause
+
 Configuration file is corrupted or invalid JSON.
 
 #### Solution
 
 **Option 1: Backup and Reset**
+
 ```bash
 # Backup current config
 cp ~/.codewave/config.json ~/.codewave/config.json.backup
@@ -154,6 +164,7 @@ codewave config
 ```
 
 **Option 2: Manual Fix**
+
 ```bash
 # Edit configuration file directly
 cat ~/.codewave/config.json  # View contents
@@ -171,9 +182,11 @@ Actual: model Y
 ```
 
 #### Cause
+
 Environment variables or CLI arguments overriding configuration file.
 
 #### Resolution Order (highest priority first):
+
 1. CLI arguments (`--model`, `--format`)
 2. Environment variables (`CODEWAVE_MODEL`)
 3. Configuration file (`~/.codewave/config.json`)
@@ -209,18 +222,21 @@ Please configure with: codewave config set api-key <key>
 #### Solution
 
 **Option 1: Set via Config**
+
 ```bash
 codewave config set api-key sk-ant-...
 codewave config show  # Verify
 ```
 
 **Option 2: Set via Environment Variable**
+
 ```bash
 export CODEWAVE_API_KEY=sk-ant-...
 codewave evaluate HEAD
 ```
 
 **Option 3: Interactive Config**
+
 ```bash
 codewave config  # Will prompt for API key
 ```
@@ -232,11 +248,13 @@ Error: 401 Unauthorized - Invalid API key
 ```
 
 #### Cause
+
 API key is incorrect, expired, or revoked.
 
 #### Solution
 
 **Step 1: Verify Key Format**
+
 ```bash
 # Key should start with provider prefix
 # Anthropic: sk-ant-...
@@ -247,11 +265,13 @@ codewave config show | grep api-key
 ```
 
 **Step 2: Check Key Validity**
+
 - Visit provider's API key management page
 - Verify key hasn't been revoked
 - Check expiration date if applicable
 
 **Step 3: Regenerate and Update**
+
 ```bash
 # 1. Generate new key from provider
 # 2. Update CodeWave
@@ -268,6 +288,7 @@ Error: LLM provider 'anthropic' not found
 ```
 
 #### Cause
+
 Invalid provider name or provider not installed.
 
 #### Solution
@@ -289,6 +310,7 @@ Error: Model 'claude-99' is not available
 ```
 
 #### Cause
+
 Model doesn't exist for selected provider.
 
 #### Solution
@@ -320,6 +342,7 @@ Error: Commit 'abc1234' not found in repository
 ```
 
 #### Cause
+
 Invalid commit hash or reference.
 
 #### Solution
@@ -347,6 +370,7 @@ fatal: not a git repository (or any of the parent directories)
 ```
 
 #### Cause
+
 Not in a Git repository directory.
 
 #### Solution
@@ -369,6 +393,7 @@ Error: No commits found in range
 ```
 
 #### Cause
+
 Commit range is empty or invalid date filters.
 
 #### Solution
@@ -391,11 +416,13 @@ Error: Evaluation timed out after 120 seconds
 ```
 
 #### Cause
+
 Large diff or slow LLM API.
 
 #### Solution
 
 **For Large Diffs**:
+
 ```bash
 # Enable RAG for automatic chunking
 codewave config set enable-rag true
@@ -406,6 +433,7 @@ codewave evaluate HEAD --verbose
 ```
 
 **For Slow API**:
+
 ```bash
 # Use faster model
 codewave config set model claude-3-haiku-20240307
@@ -426,11 +454,13 @@ Warning: Consider enabling RAG
 ```
 
 #### Cause
+
 Commit diff is too large for efficient processing.
 
 #### Solution
 
 **Option 1: Enable RAG**
+
 ```bash
 codewave config set enable-rag true
 codewave config set rag-chunk-size 2000
@@ -438,12 +468,14 @@ codewave evaluate HEAD
 ```
 
 **Option 2: Increase Threshold**
+
 ```bash
 # Set threshold to 200KB
 codewave config set rag-threshold 204800
 ```
 
 **Option 3: Process Smaller Commits**
+
 ```bash
 # Evaluate individual files instead
 git diff HEAD~1 -- src/auth.ts | codewave evaluate --stdin
@@ -458,23 +490,27 @@ git diff HEAD~1 -- src/auth.ts | codewave evaluate --stdin
 Evaluation takes 10+ seconds per commit.
 
 #### Cause
+
 Using high-quality but slow model, or network latency.
 
 #### Solution
 
 **Option 1: Use Faster Model**
+
 ```bash
 codewave config set model claude-3-haiku-20240307
 codewave evaluate HEAD --verbose
 ```
 
 **Option 2: Reduce Token Limit**
+
 ```bash
 codewave config set max-tokens 2000
 codewave evaluate HEAD --verbose
 ```
 
 **Option 3: Skip Report Generation**
+
 ```bash
 codewave evaluate HEAD --no-report --format json
 ```
@@ -486,17 +522,20 @@ Error: JavaScript heap out of memory
 ```
 
 #### Cause
+
 Processing too many commits in parallel or very large diffs.
 
 #### Solution
 
 **Option 1: Reduce Parallelization**
+
 ```bash
 codewave config set parallel-evaluations 1
 codewave batch-evaluate --count 100
 ```
 
 **Option 2: Process Smaller Batches**
+
 ```bash
 codewave batch-evaluate --count 10  # Instead of 100
 
@@ -505,6 +544,7 @@ codewave batch-evaluate --count 10 --since "2024-01-15"
 ```
 
 **Option 3: Enable Vector Store Optimization**
+
 ```bash
 # Use disk-based vector store for large commits
 codewave config set vector-store-type disk
@@ -517,6 +557,7 @@ Costs are unexpectedly high.
 #### Solution
 
 **Option 1: Use Cheaper Model**
+
 ```bash
 # Google Gemini (10x cheaper)
 codewave config set llm-provider google
@@ -527,6 +568,7 @@ codewave config set model claude-3-haiku-20240307
 ```
 
 **Option 2: Reduce Token Usage**
+
 ```bash
 # Smaller token limit
 codewave config set max-tokens 2000
@@ -536,6 +578,7 @@ codewave config set rag-chunk-size 1000
 ```
 
 **Option 3: Batch Efficiently**
+
 ```bash
 # Process in parallel to reduce overhead
 codewave batch-evaluate --count 100 --parallel 5
@@ -552,6 +595,7 @@ Error: EACCES: permission denied, open '.evaluated-commits'
 ```
 
 #### Cause
+
 No write permission to output directory.
 
 #### Solution
@@ -629,6 +673,7 @@ codewave evaluate HEAD
 ```
 
 **Verbose Output Shows**:
+
 - Agent prompts and responses
 - Token counts and costs
 - Timing for each stage
@@ -733,16 +778,19 @@ NODE_DEBUG=* codewave evaluate HEAD 2>&1 | head -100
 ### Where to Get Help
 
 **GitHub Issues**:
+
 ```
 https://github.com/techdebtgpt/codewave/issues
 ```
 
 **Email Support**:
+
 ```
 support@techdebtgpt.com
 ```
 
 **Discussions**:
+
 ```
 https://github.com/techdebtgpt/codewave/discussions
 ```
@@ -766,8 +814,10 @@ Example issue:
 
 ### Error Message
 ```
+
 Error: Evaluation timed out after 120 seconds
-```
+
+````
 
 ### Reproduction
 1. Create commit with 150KB diff
@@ -787,25 +837,31 @@ Error: Evaluation timed out after 120 seconds
   "model": "claude-3-5-sonnet-20241022",
   "enableRag": false
 }
-```
+````
 
 ### Expected
+
 Should complete evaluation in 5-10 seconds
 
 ### Actual
+
 Times out after 120 seconds
 
 ### Solution Attempted
+
 - Tried different model (same issue)
 - Tried smaller commits (works fine)
+
 ```
 
 ### Problem: LLM JSON Parsing Errors
 
 ```
+
 Failed to parse LLM output: Unexpected non-whitespace character after JSON
 Unexpected token '#'
-```
+
+````
 
 #### Cause
 Any model (Haiku, Sonnet, GPT, Gemini, Grok) can generate responses that are truncated or include extra content after JSON when approaching token limits.
@@ -837,9 +893,10 @@ No action needed - evaluation continues with best-effort parsing.
 codewave config set model claude-sonnet-4-5-20250929  # Sonnet (~4x cost)
 codewave config set model gpt-4o                       # OpenAI GPT-4o
 codewave config set model gemini-2.5-pro               # Google Gemini
-```
+````
 
 **Option 4: Manually Increase maxTokens Further**
+
 ```bash
 # View current settings
 codewave config show
@@ -849,6 +906,7 @@ codewave config show
 ```
 
 #### Why This Happens with Any Model
+
 - Models can generate verbose responses that approach token limits
 - Default maxTokens increased to 16000 to prevent truncation across all providers
 - JSON recovery system handles any remaining edge cases
@@ -872,6 +930,7 @@ codewave config show
 ---
 
 For more information:
+
 - [README.md](../README.md) - Main documentation
 - [CONFIGURATION.md](./CONFIGURATION.md) - Configuration guide
 - [CLI.md](./CLI.md) - CLI reference

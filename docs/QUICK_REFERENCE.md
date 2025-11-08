@@ -77,15 +77,15 @@ codewave config set verbose true
 
 ## 7-Pillar Metrics at a Glance
 
-| Metric | Scale | Agent | Meaning |
-|--------|-------|-------|---------|
-| **Code Quality** | 1-10 | Dev Reviewer 🔍 | Correctness, design, readability |
-| **Complexity** | 10-1* | Architect 🏛️ | 10=simple, 1=complex |
-| **Ideal Time** | Hours | Analyst 🎯 | Perfect scenario time |
-| **Actual Time** | Hours | Author 👨‍💻 | Time actually spent |
-| **Tech Debt** | +/- Hours | Architect 🏛️ | Debt added (+) or removed (-) |
-| **Impact** | 1-10 | Analyst 🎯 | Business/user value |
-| **Test Coverage** | 1-10 | QA 🧪 | Test comprehensiveness |
+| Metric            | Scale     | Agent           | Meaning                          |
+| ----------------- | --------- | --------------- | -------------------------------- |
+| **Code Quality**  | 1-10      | Dev Reviewer 🔍 | Correctness, design, readability |
+| **Complexity**    | 10-1\*    | Architect 🏛️    | 10=simple, 1=complex             |
+| **Ideal Time**    | Hours     | Analyst 🎯      | Perfect scenario time            |
+| **Actual Time**   | Hours     | Author 👨‍💻       | Time actually spent              |
+| **Tech Debt**     | +/- Hours | Architect 🏛️    | Debt added (+) or removed (-)    |
+| **Impact**        | 1-10      | Analyst 🎯      | Business/user value              |
+| **Test Coverage** | 1-10      | QA 🧪           | Test comprehensiveness           |
 
 \* Lower is better
 
@@ -144,21 +144,22 @@ codewave config set verbose true
 
 Every commit is evaluated across 7 dimensions:
 
-| Metric | Scale | What It Means | Good Score |
-|--------|-------|--------------|------------|
-| Code Quality | 1-10 | Correctness, design, readability | 8+ |
-| Complexity | 10-1* | How simple/complex the code is | 8+* |
-| Ideal Time | Hours | Perfect-case implementation time | Fits sprint |
-| Actual Time | Hours | Real time developer spent | ≈ Ideal time |
-| Tech Debt | +/- Hours | Debt added/removed | Negative (debt removed) |
-| Functional Impact | 1-10 | Business value to users | 8+ |
-| Test Coverage | 1-10 | Test comprehensiveness | 8+ |
+| Metric            | Scale     | What It Means                    | Good Score              |
+| ----------------- | --------- | -------------------------------- | ----------------------- |
+| Code Quality      | 1-10      | Correctness, design, readability | 8+                      |
+| Complexity        | 10-1\*    | How simple/complex the code is   | 8+\*                    |
+| Ideal Time        | Hours     | Perfect-case implementation time | Fits sprint             |
+| Actual Time       | Hours     | Real time developer spent        | ≈ Ideal time            |
+| Tech Debt         | +/- Hours | Debt added/removed               | Negative (debt removed) |
+| Functional Impact | 1-10      | Business value to users          | 8+                      |
+| Test Coverage     | 1-10      | Test comprehensiveness           | 8+                      |
 
-*Lower complexity score (1-3) means complex, higher score (8-10) means simple
+\*Lower complexity score (1-3) means complex, higher score (8-10) means simple
 
 ### Quick Interpretation
 
 **Good Commit Pattern:**
+
 ```
 ✓ Code Quality: 8+
 ✓ Complexity: 8+ (simple, reversed scale)
@@ -169,6 +170,7 @@ Every commit is evaluated across 7 dimensions:
 ```
 
 **Red Flags:**
+
 ```
 ⚠️ Code Quality < 6: Needs review/refactoring
 ⚠️ Complexity < 5: Refactor for clarity
@@ -180,6 +182,7 @@ Every commit is evaluated across 7 dimensions:
 ### Developer Overview
 
 The first section of your report - a quick AI-generated summary:
+
 - **Summary**: One-line overview (10 seconds)
 - **Details**: Brief explanation (30 seconds)
 - **Key Changes**: What actually changed (1 minute)
@@ -189,6 +192,7 @@ The first section of your report - a quick AI-generated summary:
 ### Multi-Round Conversation
 
 Agents discuss across 3 rounds:
+
 1. **Round 1**: Each agent's initial assessment
 2. **Round 2**: Agents raise concerns and challenge assumptions
 3. **Round 3**: Final validation and consensus
@@ -198,6 +202,7 @@ Agents discuss across 3 rounds:
 ### Convergence Score
 
 Shows how much agents agreed (0.0 to 1.0):
+
 - **0.9+**: Strong consensus, reliable
 - **0.7-0.8**: Good consensus, minor disagreements
 - **0.5-0.6**: Moderate agreement, investigate
@@ -232,26 +237,31 @@ export CODEWAVE_VERBOSE=true
 ## Agent Profiles
 
 ### Business Analyst 🎯
+
 - **Evaluates**: Functional Impact, Ideal Time
 - **Asks**: "What is the business value?"
 - **Concerns**: Scope creep, missing requirements
 
 ### Developer Author 👨‍💻
+
 - **Evaluates**: Actual Time Spent
 - **Asks**: "How long did this actually take?"
 - **Concerns**: Unclear requirements, unexpected complexity
 
 ### Developer Reviewer 🔍
+
 - **Evaluates**: Code Quality
 - **Asks**: "Does this code work correctly?"
 - **Concerns**: Bugs, poor design, readability
 
 ### Senior Architect 🏛️
+
 - **Evaluates**: Complexity, Technical Debt
 - **Asks**: "Is this scalable and maintainable?"
 - **Concerns**: Architectural issues, debt
 
 ### QA Engineer 🧪
+
 - **Evaluates**: Test Coverage
 - **Asks**: "Are we confident this works?"
 - **Concerns**: Untested scenarios, edge cases
@@ -260,13 +270,13 @@ export CODEWAVE_VERBOSE=true
 
 ## LLM Provider Comparison
 
-| Provider | Model | Speed | Quality | Cost | Notes |
-|----------|-------|-------|---------|------|-------|
-| **Anthropic** | Sonnet | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | Recommended |
-| **Anthropic** | Opus | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | Best quality |
-| **Anthropic** | Haiku | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ | Budget option |
-| **OpenAI** | GPT-4o | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | Good alternative |
-| **Google** | Gemini | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | Most cost-effective |
+| Provider      | Model  | Speed    | Quality    | Cost     | Notes               |
+| ------------- | ------ | -------- | ---------- | -------- | ------------------- |
+| **Anthropic** | Sonnet | ⭐⭐⭐   | ⭐⭐⭐⭐   | ⭐⭐⭐   | Recommended         |
+| **Anthropic** | Opus   | ⭐⭐     | ⭐⭐⭐⭐⭐ | ⭐⭐     | Best quality        |
+| **Anthropic** | Haiku  | ⭐⭐⭐⭐ | ⭐⭐       | ⭐⭐⭐⭐ | Budget option       |
+| **OpenAI**    | GPT-4o | ⭐⭐⭐   | ⭐⭐⭐⭐   | ⭐⭐     | Good alternative    |
+| **Google**    | Gemini | ⭐⭐⭐⭐ | ⭐⭐⭐     | ⭐⭐⭐⭐ | Most cost-effective |
 
 ---
 
@@ -346,11 +356,13 @@ codewave evaluate abc1234
 ## Troubleshooting Quick Fixes
 
 ### Error: "API Key not found"
+
 ```bash
 codewave config set api-key sk-ant-...
 ```
 
 ### Error: "Rate limit exceeded"
+
 ```bash
 # Slow down
 codewave config set parallel-evaluations 1
@@ -358,12 +370,14 @@ codewave batch-evaluate --count 10
 ```
 
 ### Error: "Out of memory"
+
 ```bash
 # Reduce parallelization
 codewave config set parallel-evaluations 1
 ```
 
 ### Error: "Timeout"
+
 ```bash
 # Enable RAG for large diffs
 codewave config set enable-rag true
@@ -372,6 +386,7 @@ codewave config set model claude-3-haiku-20240307
 ```
 
 ### Error: "Too expensive"
+
 ```bash
 # Use cheaper model
 codewave config set llm-provider google
@@ -394,14 +409,17 @@ During interactive config:
 ## File Locations
 
 ### Configuration
+
 - **macOS/Linux**: `~/.codewave/config.json`
 - **Windows**: `%APPDATA%\codewave\config.json`
 
 ### Results
+
 - **Default**: `.evaluated-commits/`
 - **Custom**: Set with `-o` flag or config
 
 ### Logs
+
 - **Runtime**: `stdout`
 - **Verbose**: Use `--verbose` flag
 
@@ -410,6 +428,7 @@ During interactive config:
 ## CLI Arguments Quick Guide
 
 ### evaluate
+
 ```
 codewave evaluate <commit> [options]
   <commit>             Commit hash or reference
@@ -420,6 +439,7 @@ codewave evaluate <commit> [options]
 ```
 
 ### batch-evaluate
+
 ```
 codewave batch-evaluate [options]
   --count <num>        Commits to evaluate (default: 10)
@@ -433,6 +453,7 @@ codewave batch-evaluate [options]
 ```
 
 ### config
+
 ```
 codewave config [command]
   (no args)            Interactive setup
@@ -479,6 +500,7 @@ codewave config [command]
 ## Tips & Tricks
 
 ### Speed Up Evaluation
+
 ```bash
 # Use fastest model
 codewave config set model claude-3-haiku-20240307
@@ -487,6 +509,7 @@ codewave config set parallel-evaluations 5
 ```
 
 ### Get Best Quality
+
 ```bash
 # Use best model
 codewave config set model claude-3-opus-20250219
@@ -495,6 +518,7 @@ codewave config set parallel-evaluations 1
 ```
 
 ### Save Money
+
 ```bash
 # Use Google Gemini (10x cheaper)
 codewave config set llm-provider google
@@ -502,6 +526,7 @@ codewave config set model gemini-2.0-flash
 ```
 
 ### Debug Issues
+
 ```bash
 # Enable verbose logging
 codewave config set verbose true
@@ -509,6 +534,7 @@ codewave evaluate HEAD --verbose
 ```
 
 ### Batch Process Efficiently
+
 ```bash
 # Process 1000 commits in ~30 minutes
 codewave batch-evaluate --count 1000 --parallel 5 --since "2024-01-01"
@@ -536,6 +562,7 @@ https://github.com/techdebtgpt/codewave/issues
 ---
 
 For detailed information, see:
+
 - [README.md](../README.md) - Complete documentation
 - [AGENTS.md](./AGENTS.md) - Agent specifications
 - [CONFIGURATION.md](./CONFIGURATION.md) - Configuration details

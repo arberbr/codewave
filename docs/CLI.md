@@ -64,6 +64,7 @@ Git commit reference to evaluate. Can be:
 - **Relative**: `HEAD~1`, `HEAD~5`
 
 **Examples**:
+
 ```bash
 codewave evaluate HEAD                    # Latest commit
 codewave evaluate abc1234                 # Specific commit
@@ -122,6 +123,7 @@ codewave evaluate HEAD --verbose
 ```
 
 **Verbose Output Includes**:
+
 - Agent prompts and reasoning
 - Token counts per API call
 - Timing for each stage
@@ -140,6 +142,7 @@ codewave evaluate HEAD --no-report      # Generate only JSON/text
 ```
 
 Useful when:
+
 - Running in headless environments
 - Generating only for CI/CD
 - Large batch processing (faster)
@@ -157,6 +160,7 @@ codewave evaluate HEAD --model gpt-4o
 ```
 
 **Common Models**:
+
 - `claude-3-5-sonnet-20241022` (Anthropic, recommended)
 - `claude-3-opus-20250219` (Anthropic, best quality)
 - `claude-3-haiku-20240307` (Anthropic, fastest)
@@ -229,6 +233,7 @@ Start date for commit range.
 **Default**: `null` (no start limit)
 
 **Formats**:
+
 ```bash
 # ISO format
 codewave batch-evaluate --since 2024-01-01
@@ -290,6 +295,7 @@ codewave batch-evaluate --parallel 5      # Maximum (fast, high cost)
 ```
 
 **Considerations**:
+
 - **1**: Slow but reliable, minimal rate-limit issues
 - **3**: Good balance (default)
 - **5**: Fast but may hit rate limits
@@ -306,6 +312,7 @@ codewave batch-evaluate --skip-errors --count 100
 ```
 
 If a commit evaluation fails:
+
 - **Without flag**: Batch stops immediately
 - **With flag**: Logs error and continues
 
@@ -321,6 +328,7 @@ codewave batch-evaluate --count 50 --verbose
 ```
 
 Displays detailed information about:
+
 - Each commit being evaluated
 - Token usage per commit
 - Estimated costs
@@ -436,6 +444,7 @@ codewave config show
 ```
 
 **Output**:
+
 ```
 CodeWave Configuration
 =====================
@@ -461,6 +470,7 @@ codewave config set <key> <value>
 ```
 
 **Common Keys**:
+
 ```bash
 codewave config set llm-provider anthropic
 codewave config set model claude-3-5-sonnet-20241022
@@ -487,17 +497,17 @@ codewave config reset
 
 ## Exit Codes
 
-| Code | Meaning | Solution |
-|------|---------|----------|
-| `0` | Success | No action needed |
-| `1` | General failure | Check error message |
-| `2` | Invalid arguments | Verify syntax with `--help` |
-| `3` | Commit not found | Check commit hash/reference |
-| `4` | Configuration error | Run `codewave config` |
-| `5` | API authentication failed | Verify API key with `codewave config show` |
-| `6` | Rate limit exceeded | Reduce parallelization |
-| `7` | Network error | Check internet connection |
-| `8` | File system error | Check permissions on output directory |
+| Code | Meaning                   | Solution                                   |
+| ---- | ------------------------- | ------------------------------------------ |
+| `0`  | Success                   | No action needed                           |
+| `1`  | General failure           | Check error message                        |
+| `2`  | Invalid arguments         | Verify syntax with `--help`                |
+| `3`  | Commit not found          | Check commit hash/reference                |
+| `4`  | Configuration error       | Run `codewave config`                      |
+| `5`  | API authentication failed | Verify API key with `codewave config show` |
+| `6`  | Rate limit exceeded       | Reduce parallelization                     |
+| `7`  | Network error             | Check internet connection                  |
+| `8`  | File system error         | Check permissions on output directory      |
 
 ---
 
@@ -702,6 +712,7 @@ codewave evaluate abc1234 --verbose
 ---
 
 For more information:
+
 - [README.md](../README.md) - Main documentation
 - [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) - Quick lookup
 - [CONFIGURATION.md](./CONFIGURATION.md) - Detailed configuration

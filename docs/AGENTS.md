@@ -31,6 +31,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 **Role**: Strategic business stakeholder responsible for value alignment and impact assessment.
 
 **Expertise Areas**:
+
 - Business value and ROI
 - User impact and satisfaction
 - Feature completeness and scope
@@ -38,6 +39,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - Time-to-value analysis
 
 **Responsible For Metrics**:
+
 - **Ideal Time Hours** - Development time under perfect conditions
 - **Functional Impact** (1-10) - User-facing value and business impact
 
@@ -63,6 +65,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
    - Feature completeness assessment
 
 **Prompting Strategy**:
+
 - Focuses on business value and market relevance
 - Asks "What problem does this solve?"
 - Considers competitive advantage
@@ -70,12 +73,14 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - Thinks about product roadmap alignment
 
 **Example Concerns**:
+
 - "Feature doesn't address user complaints mentioned in product backlog"
 - "Ideal time seems underestimated given feature complexity"
 - "Changes conflict with Q1 strategic initiative"
 - "User-facing impact is limited compared to effort invested"
 
 **Consensus Contributions**:
+
 - Business case validation
 - Feature priority and urgency assessment
 - Risk analysis from business perspective
@@ -88,6 +93,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 **Role**: Original code author providing implementation context and insights.
 
 **Expertise Areas**:
+
 - Implementation decisions and tradeoffs
 - Development process and challenges
 - Time estimation accuracy
@@ -95,6 +101,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - Domain-specific complexity
 
 **Responsible For Metrics**:
+
 - **Actual Time Hours** - Time spent on implementation
 
 **Primary Responsibilities**:
@@ -118,6 +125,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
    - Integration challenges
 
 **Prompting Strategy**:
+
 - Asks "What was the actual development experience?"
 - Focuses on challenges and learnings
 - Considers quality of requirements
@@ -125,12 +133,14 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - Thinks about team collaboration
 
 **Example Concerns**:
+
 - "Took twice the ideal time due to unclear requirements"
 - "Had to refactor twice to get architecture right"
 - "Discovered database limitations not mentioned in requirements"
 - "API integration was more complex than expected"
 
 **Consensus Contributions**:
+
 - Reality check on estimates and complexity
 - Identification of process improvements
 - Team velocity and skill considerations
@@ -143,6 +153,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 **Role**: Code quality auditor ensuring production readiness and best practices.
 
 **Expertise Areas**:
+
 - Code correctness and robustness
 - Design patterns and architecture
 - Readability and maintainability
@@ -150,6 +161,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - API design and naming conventions
 
 **Responsible For Metrics**:
+
 - **Code Quality** (1-10) - Overall code quality assessment
 
 **Primary Responsibilities**:
@@ -176,6 +188,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
    - Technical debt introduced?
 
 **Scoring Scale** (1-10):
+
 - **1-3**: Multiple bugs, poor patterns, unmaintainable
 - **4-5**: Significant issues, needs refactoring
 - **6-7**: Generally good with minor issues
@@ -183,6 +196,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - **10**: Exemplary code worthy of template
 
 **Prompting Strategy**:
+
 - Questions code logic and edge cases
 - Looks for security issues
 - Evaluates design decisions
@@ -190,6 +204,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - Thinks about testing coverage
 
 **Example Concerns**:
+
 - "Missing null check could cause null pointer exception"
 - "Using array iteration inefficiently (O(n²) complexity)"
 - "Magic numbers should be named constants"
@@ -197,6 +212,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - "Functions are too long and do too much"
 
 **Consensus Contributions**:
+
 - Technical correctness verification
 - Best practices alignment
 - Code review recommendations
@@ -210,6 +226,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 **Role**: Technical leader focused on scalability, architecture, and long-term maintenance.
 
 **Expertise Areas**:
+
 - System architecture and design
 - Scalability and performance
 - Technical debt accumulation
@@ -218,6 +235,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - Complexity metrics
 
 **Responsible For Metrics**:
+
 - **Code Complexity** (10-1, inverted) - Cyclomatic and cognitive complexity
 - **Technical Debt Hours** (+/-) - Debt introduced or eliminated
 
@@ -245,6 +263,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
    - Net change in codebase health
 
 **Technical Debt Scale** (+/- hours):
+
 - **-20 to -10**: Significant refactoring and debt reduction
 - **-10 to -1**: Moderate improvements to codebase health
 - **0**: Neutral impact on technical debt
@@ -252,6 +271,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - **+10 to +40**: Significant new technical debt
 
 **Prompting Strategy**:
+
 - Thinks about system-wide implications
 - Considers long-term maintenance burden
 - Questions architectural fit
@@ -259,6 +279,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - Assesses technical debt
 
 **Example Concerns**:
+
 - "Tight coupling to specific database implementation"
 - "This pattern will be difficult to test"
 - "Introduces significant technical debt for short-term gain"
@@ -266,6 +287,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - "Complexity makes future modifications risky"
 
 **Consensus Contributions**:
+
 - Architectural validation
 - Long-term sustainability assessment
 - Technical debt analysis
@@ -279,6 +301,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 **Role**: Quality assurance specialist ensuring reliability and test coverage.
 
 **Expertise Areas**:
+
 - Test coverage and comprehensiveness
 - Edge case identification
 - Error scenario handling
@@ -287,6 +310,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - Reliability and resilience
 
 **Responsible For Metrics**:
+
 - **Test Coverage** (1-10) - Comprehensiveness of test suite
 
 **Primary Responsibilities**:
@@ -313,6 +337,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
    - Error recovery paths?
 
 **Scoring Scale** (1-10):
+
 - **1-3**: No tests or only trivial tests, high risk
 - **4-5**: Basic tests present, significant gaps
 - **6-7**: Good coverage with some gaps
@@ -320,6 +345,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - **10**: Excellent coverage, all scenarios tested
 
 **Prompting Strategy**:
+
 - Asks "What could go wrong?"
 - Identifies untested scenarios
 - Evaluates test quality
@@ -327,6 +353,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - Thinks about regression prevention
 
 **Example Concerns**:
+
 - "No tests for error handling path"
 - "Only happy path tested, error scenarios ignored"
 - "Tests are brittle and couple to implementation"
@@ -334,6 +361,7 @@ Each agent focuses on specific evaluation pillars and brings unique perspectives
 - "Performance regression scenarios not tested"
 
 **Consensus Contributions**:
+
 - Risk assessment and mitigation
 - Testing recommendations
 - Reliability analysis
@@ -491,12 +519,14 @@ where:
 ### Round 1: Initial Assessment Template
 
 Each agent receives:
+
 - Complete commit diff
 - File names and sizes
 - Author and commit message
 - Their specific evaluation pillar
 
 **Agent Prompt Template**:
+
 ```
 You are [Agent Name], with expertise in [expertise area].
 Your role in this code review is to assess [specific responsibility].
@@ -513,6 +543,7 @@ Provide:
 ```
 
 **Expected Output Format**:
+
 ```
 ASSESSMENT: [Detailed observations and analysis]
 
@@ -532,11 +563,13 @@ QUESTIONS FOR OTHER AGENTS:
 ### Round 2: Concerns & Cross-Examination
 
 Each agent receives:
+
 - All Round 1 assessments
 - Previous agent responses
 - Shared conversation history
 
 **Agent Prompt Template**:
+
 ```
 You are [Agent Name]. You've reviewed other agents' assessments of this commit.
 
@@ -550,6 +583,7 @@ Update your assessment considering the discussion:
 ```
 
 **Expected Output Format**:
+
 ```
 CONCERNS ABOUT OTHER ASSESSMENTS:
 - [Agent X's concern about assessment]
@@ -571,6 +605,7 @@ CONFIDENCE: [Updated confidence %]
 Each agent provides final position:
 
 **Agent Prompt Template**:
+
 ```
 You are [Agent Name]. This is the final round of discussion.
 
@@ -582,6 +617,7 @@ Based on all previous input:
 ```
 
 **Expected Output Format**:
+
 ```
 FINAL ASSESSMENT:
 [Comprehensive final position]
@@ -642,21 +678,25 @@ const consensus = calculateConsensus(round3Responses);
 ## Common Agent Disagreements
 
 ### Quality vs. Complexity
+
 - **Developer Reviewer** emphasizes code quality (readability, correctness)
 - **Senior Architect** prioritizes simplicity and long-term maintainability
 - **Resolution**: Balance immediate quality with architectural concerns
 
 ### Time Estimates
+
 - **Business Analyst** provides ideal scenario estimate
 - **Developer Author** reports actual spent time
 - **Resolution**: Variance reveals process inefficiencies or unclear requirements
 
 ### Coverage vs. Quality
+
 - **QA Engineer** focuses on test comprehensiveness
 - **Developer Reviewer** emphasizes test quality over quantity
 - **Resolution**: Both are important; comprehensive but poor tests are insufficient
 
 ### Business Value vs. Technical Debt
+
 - **Business Analyst** prioritizes feature delivery and user impact
 - **Senior Architect** warns about technical debt and long-term cost
 - **Resolution**: Quantify technical debt to inform business decisions
@@ -664,6 +704,7 @@ const consensus = calculateConsensus(round3Responses);
 ---
 
 For more information:
+
 - [README.md](../README.md) - Main documentation
 - [API.md](./API.md) - Programmatic API
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture

@@ -129,20 +129,20 @@ Complete guide to all CodeWave documentation.
 
 ## Documentation Statistics
 
-| Document | Lines | Topic | Audience |
-|----------|-------|-------|----------|
-| README.md | 750 | Overview & Getting Started | Everyone |
-| QUICK_REFERENCE.md | 540 | Fast Lookup | Users |
-| HTML_REPORT_GUIDE.md | 600 | Report Interpretation | Users |
-| ADVANCED_FEATURES.md | 700 | Deep Dive Features | Power Users |
-| AGENTS.md | 669 | Agent Deep-Dive | Implementers |
-| ARCHITECTURE.md | 900 | System Design | Developers |
-| CLI.md | 708 | Command Reference | Users |
-| CONFIGURATION.md | 750 | Setup Guide | Users |
-| EXAMPLES.md | 688 | Practical Use Cases | Users |
-| API.md | 716 | Programmatic Access | Developers |
-| TROUBLESHOOTING.md | 824 | Support & Fixes | Everyone |
-| **TOTAL** | **8,245** | | |
+| Document             | Lines     | Topic                      | Audience     |
+| -------------------- | --------- | -------------------------- | ------------ |
+| README.md            | 750       | Overview & Getting Started | Everyone     |
+| QUICK_REFERENCE.md   | 540       | Fast Lookup                | Users        |
+| HTML_REPORT_GUIDE.md | 600       | Report Interpretation      | Users        |
+| ADVANCED_FEATURES.md | 700       | Deep Dive Features         | Power Users  |
+| AGENTS.md            | 669       | Agent Deep-Dive            | Implementers |
+| ARCHITECTURE.md      | 900       | System Design              | Developers   |
+| CLI.md               | 708       | Command Reference          | Users        |
+| CONFIGURATION.md     | 750       | Setup Guide                | Users        |
+| EXAMPLES.md          | 688       | Practical Use Cases        | Users        |
+| API.md               | 716       | Programmatic Access        | Developers   |
+| TROUBLESHOOTING.md   | 824       | Support & Fixes            | Everyone     |
+| **TOTAL**            | **8,245** |                            |              |
 
 ## Quick Navigation
 
@@ -242,19 +242,19 @@ START HERE
 
 ### By Document
 
-| Feature | README | Quick Ref | CLI | Config | Examples | API | Agents | Architecture | Troubleshooting |
-|---------|--------|-----------|-----|--------|----------|-----|--------|---------------|-----------------|
-| Installation | ✓ | | | | | | | | ✓ |
-| Quick Start | ✓ | | | | | | | | |
-| Commands | ✓ | ✓ | ✓ | | ✓ | | | | |
-| Configuration | ✓ | ✓ | ✓ | ✓ | | | | | ✓ |
-| Agents | ✓ | ✓ | | | | | ✓ | ✓ | |
-| Architecture | | | | | | | ✓ | ✓ | |
-| CI/CD | | | | | ✓ | | | | |
-| Examples | | | ✓ | | ✓ | ✓ | | | |
-| Troubleshooting | | | | | | | | | ✓ |
-| Scoring | ✓ | ✓ | | | | | | | |
-| Evaluation | ✓ | ✓ | ✓ | | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Feature         | README | Quick Ref | CLI | Config | Examples | API | Agents | Architecture | Troubleshooting |
+| --------------- | ------ | --------- | --- | ------ | -------- | --- | ------ | ------------ | --------------- |
+| Installation    | ✓      |           |     |        |          |     |        |              | ✓               |
+| Quick Start     | ✓      |           |     |        |          |     |        |              |                 |
+| Commands        | ✓      | ✓         | ✓   |        | ✓        |     |        |              |                 |
+| Configuration   | ✓      | ✓         | ✓   | ✓      |          |     |        |              | ✓               |
+| Agents          | ✓      | ✓         |     |        |          |     | ✓      | ✓            |                 |
+| Architecture    |        |           |     |        |          |     | ✓      | ✓            |                 |
+| CI/CD           |        |           |     |        | ✓        |     |        |              |                 |
+| Examples        |        |           | ✓   |        | ✓        | ✓   |        |              |                 |
+| Troubleshooting |        |           |     |        |          |     |        |              | ✓               |
+| Scoring         | ✓      | ✓         |     |        |          |     |        |              |                 |
+| Evaluation      | ✓      | ✓         | ✓   |        | ✓        | ✓   | ✓      | ✓            | ✓               |
 
 ## Learning Paths
 
@@ -290,12 +290,15 @@ START HERE
 ## Search Tips
 
 ### By Error Message
+
 Search [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for your error
 
 ### By Command
+
 Search [CLI.md](./CLI.md) or [EXAMPLES.md](./EXAMPLES.md)
 
 ### By Concept
+
 - **7-Pillars**: See [README.md](../README.md)
 - **Agents**: See [AGENTS.md](./AGENTS.md)
 - **Configuration**: See [CONFIGURATION.md](./CONFIGURATION.md)
@@ -304,17 +307,20 @@ Search [CLI.md](./CLI.md) or [EXAMPLES.md](./EXAMPLES.md)
 ## External Resources
 
 ### Official Links
+
 - GitHub: https://github.com/techdebtgpt/codewave
 - Issues: https://github.com/techdebtgpt/codewave/issues
 - Discussions: https://github.com/techdebtgpt/codewave/discussions
 - Website: https://techdebtgpt.com
 
 ### LLM Providers
+
 - **Anthropic Claude**: https://console.anthropic.com
 - **OpenAI GPT**: https://platform.openai.com
 - **Google Gemini**: https://ai.google.dev
 
 ### Related Technologies
+
 - **LangChain**: https://www.langchain.com/
 - **LangGraph**: https://www.langchain.com/langgraph
 - **Commander.js**: https://github.com/tj/commander.js

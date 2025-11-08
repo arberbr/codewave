@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-  "module": "NodeNext",
+    "module": "NodeNext",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
-  "rootDir": ".",
+    "rootDir": ".",
     "baseUrl": "./src",
-  "moduleResolution": "nodenext",
+    "moduleResolution": "nodenext",
     "paths": {
       "@modules/*": ["modules/*"],
       "@common/*": ["common/*"],

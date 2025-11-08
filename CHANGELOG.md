@@ -7,12 +7,14 @@ All notable changes to CodeWave are documented here.
 ### Bug Fixes
 
 #### Developer Overview Not Being Saved
+
 - **Issue**: Developer Overview was being generated but not saved to `results.json`
 - **Root Cause**: Parameter passing issue in batch evaluate command - `developerOverview` was embedded in `metadata` instead of passed as separate parameter
 - **Fix**: Updated [cli/commands/batch-evaluate-command.ts](cli/commands/batch-evaluate-command.ts) to pass `developerOverview` directly to `saveEvaluationReports()`
 - **Impact**: Developer Overview now correctly appears in both `results.json` and HTML reports
 
 #### Report Display Improvements
+
 - **Developer Overview Card**: Now always visible in HTML report with helpful placeholder when generation fails
 - **Branding Update**: Changed footer text from "Commit Evaluator" to "CodeWave"
 - **Model Information**: Added LLM model display in Evaluation History tab header
@@ -39,6 +41,7 @@ All notable changes to CodeWave are documented here.
 ### Major Improvements
 
 #### 1. 🚀 Model Optimization & Robustness
+
 - **Default Model Changed**: Now uses `claude-haiku-4-5-20251001` (6x cheaper than Sonnet)
 - **maxTokens Increased to 16000 (All Models)**: Prevents response truncation and JSON parsing errors
   - Original: 8000 tokens (caused truncation with verbose responses)
@@ -56,6 +59,7 @@ All notable changes to CodeWave are documented here.
   - Critical instruction: "Return ONLY JSON, no markdown, no extra text"
 
 #### 2. 🌍 Multi-Provider Support Expanded
+
 - **New Provider**: Added xAI Grok support
   - `grok-4-fast-non-reasoning` - Cost-optimized
   - `grok-4.2` - Polished version
@@ -67,6 +71,7 @@ All notable changes to CodeWave are documented here.
   - **xAI**: Grok 4-fast, 4.2, 4
 
 #### 3. 📊 Enhanced Report Visualization
+
 - **Evaluation History Tab**: Completely redesigned for clarity
   - Fixed confusing "vs Eval #X" headers → "Change from Previous"
   - Added color-coded badges for changes (red for increases, green for decreases)
@@ -77,6 +82,7 @@ All notable changes to CodeWave are documented here.
   - Added interpretation guide explaining all metrics
 
 #### 4. 🔧 Agent Improvements
+
 - **Replaced QA Engineer**: Now uses SDET (Software Development Engineer in Test) agent
   - Specialized in test automation quality
   - Evaluates testing frameworks and infrastructure
@@ -87,6 +93,7 @@ All notable changes to CodeWave are documented here.
   - Better error logging
 
 #### 5. 📝 Developer Overview Integration
+
 - **Graph-Based Architecture**: Developer overview now part of LangGraph workflow
   - Runs as first node before agents
   - Token tracking included in total cost calculation
@@ -97,6 +104,7 @@ All notable changes to CodeWave are documented here.
   - Consistent formatting across commands
 
 #### 6. 🐛 Bug Fixes
+
 - **Progress Bar Issue**: Fixed negative String.repeat() causing crashes
   - Added Math.max(0, ...) bounds checking
 - **Batch Directory Naming**: Fixed inconsistency (8-char vs 40-char hashes)
@@ -131,32 +139,35 @@ All notable changes to CodeWave are documented here.
 ### Technical Details
 
 #### Prompt Changes
+
 All agents now request concise output:
+
 - Summary: "max 150 chars"
 - Details: "max 400 chars, Be concise"
 - CRITICAL instruction: "Return ONLY the JSON object, no markdown, no extra text"
 
 #### JSON Recovery Strategy
-```typescript
+
+````typescript
 // Layer 1: Strip markdown fences
 let cleanOutput = output.trim();
 if (cleanOutput.startsWith('```json') || cleanOutput.startsWith('```')) {
-    cleanOutput = cleanOutput.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+  cleanOutput = cleanOutput.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
 }
 
 // Layer 2: Extract JSON from mixed content
 const jsonMatch = cleanOutput.match(/\{[\s\S]*\}/);
 if (jsonMatch) {
-    cleanOutput = jsonMatch[0];
+  cleanOutput = jsonMatch[0];
 }
 
 // Layer 3: Close incomplete braces
 let braceCount = (cleanOutput.match(/\{/g) || []).length;
 let closingBraces = (cleanOutput.match(/\}/g) || []).length;
 if (braceCount > closingBraces) {
-    cleanOutput += '}'.repeat(braceCount - closingBraces);
+  cleanOutput += '}'.repeat(braceCount - closingBraces);
 }
-```
+````
 
 ### Migration Guide
 
@@ -167,6 +178,7 @@ If upgrading from previous version:
    - No action needed
 
 2. **If You Prefer Sonnet**
+
    ```bash
    codewave config set model claude-sonnet-4-5-20250929
    ```
@@ -210,6 +222,7 @@ If upgrading from previous version:
 ## [0.0.0] - Initial Release
 
 Initial release of CodeWave with:
+
 - 5-agent evaluation system
 - 7-pillar methodology
 - LangGraph-based orchestration

@@ -115,14 +115,14 @@ codewave evaluate HEAD
 ```json
 {
   "metrics": {
-    "codeQuality": 7.5,           // Good, room for improvement
-    "codeComplexity": 7.0,        // Acceptable complexity
-    "idealTimeHours": 8,          // Feature estimated at 8 hours
-    "actualTimeHours": 12,        // Took 12 hours (1.5x ideal)
-    "technicalDebtHours": 2,      // Added 2 hours of debt
-    "functionalImpact": 8.5,      // High business value
-    "testCoverage": 6.5,          // Needs better test coverage
-    "qualityScore": 7.3           // Overall acceptable
+    "codeQuality": 7.5, // Good, room for improvement
+    "codeComplexity": 7.0, // Acceptable complexity
+    "idealTimeHours": 8, // Feature estimated at 8 hours
+    "actualTimeHours": 12, // Took 12 hours (1.5x ideal)
+    "technicalDebtHours": 2, // Added 2 hours of debt
+    "functionalImpact": 8.5, // High business value
+    "testCoverage": 6.5, // Needs better test coverage
+    "qualityScore": 7.3 // Overall acceptable
   },
   "consensus": {
     "topConcerns": [
@@ -348,7 +348,7 @@ code_quality_gate:
     - merge_requests
 
   environment:
-    CODEWAVE_VERBOSE: "false"
+    CODEWAVE_VERBOSE: 'false'
 ```
 
 #### GitHub Actions Example
@@ -368,7 +368,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Full history for commit analysis
+          fetch-depth: 0 # Full history for commit analysis
 
       - uses: actions/setup-node@v3
         with:
@@ -682,6 +682,7 @@ codewave config set parallel-evaluations 1
 ---
 
 For more information:
+
 - [README.md](../README.md) - Main documentation
 - [CLI.md](./CLI.md) - CLI reference
 - [API.md](./API.md) - Programmatic API

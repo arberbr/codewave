@@ -4,12 +4,12 @@
  */
 
 export interface DepthModeConfig {
-    maxInternalIterations: number; // Maximum times an agent refines itself
-    internalClarityThreshold: number; // Clarity score target (0-100) for agent to stop
-    maxSelfQuestions: number; // Maximum self-questions agent can ask
-    skipSelfRefinement: boolean; // Whether to skip self-refinement entirely
-    ragEnabled: boolean; // Whether to use RAG for context retrieval
-    tokenBudgetPerAgent: number; // Approximate token budget per agent
+  maxInternalIterations: number; // Maximum times an agent refines itself
+  internalClarityThreshold: number; // Clarity score target (0-100) for agent to stop
+  maxSelfQuestions: number; // Maximum self-questions agent can ask
+  skipSelfRefinement: boolean; // Whether to skip self-refinement entirely
+  ragEnabled: boolean; // Whether to use RAG for context retrieval
+  tokenBudgetPerAgent: number; // Approximate token budget per agent
 }
 
 /**
@@ -37,42 +37,42 @@ export interface DepthModeConfig {
  * - ~3500 tokens per agent
  */
 export const DEPTH_MODE_CONFIGS: Record<'fast' | 'normal' | 'deep', DepthModeConfig> = {
-    fast: {
-        maxInternalIterations: 1,
-        internalClarityThreshold: 65,
-        maxSelfQuestions: 1,
-        skipSelfRefinement: true,
-        ragEnabled: false,
-        tokenBudgetPerAgent: 800,
-    },
-    normal: {
-        maxInternalIterations: 3,
-        internalClarityThreshold: 80,
-        maxSelfQuestions: 3,
-        skipSelfRefinement: false,
-        ragEnabled: true,
-        tokenBudgetPerAgent: 2000,
-    },
-    deep: {
-        maxInternalIterations: 8,
-        internalClarityThreshold: 88,
-        maxSelfQuestions: 5,
-        skipSelfRefinement: false,
-        ragEnabled: true,
-        tokenBudgetPerAgent: 3500,
-    },
+  fast: {
+    maxInternalIterations: 1,
+    internalClarityThreshold: 65,
+    maxSelfQuestions: 1,
+    skipSelfRefinement: true,
+    ragEnabled: false,
+    tokenBudgetPerAgent: 800,
+  },
+  normal: {
+    maxInternalIterations: 3,
+    internalClarityThreshold: 80,
+    maxSelfQuestions: 3,
+    skipSelfRefinement: false,
+    ragEnabled: true,
+    tokenBudgetPerAgent: 2000,
+  },
+  deep: {
+    maxInternalIterations: 8,
+    internalClarityThreshold: 88,
+    maxSelfQuestions: 5,
+    skipSelfRefinement: false,
+    ragEnabled: true,
+    tokenBudgetPerAgent: 3500,
+  },
 };
 
 /**
  * Get depth mode config with optional overrides
  */
 export function getDepthModeConfig(
-    mode: 'fast' | 'normal' | 'deep' = 'normal',
-    overrides?: Partial<DepthModeConfig>
+  mode: 'fast' | 'normal' | 'deep' = 'normal',
+  overrides?: Partial<DepthModeConfig>
 ): DepthModeConfig {
-    const baseConfig = DEPTH_MODE_CONFIGS[mode];
-    return {
-        ...baseConfig,
-        ...(overrides || {}),
-    };
+  const baseConfig = DEPTH_MODE_CONFIGS[mode];
+  return {
+    ...baseConfig,
+    ...(overrides || {}),
+  };
 }

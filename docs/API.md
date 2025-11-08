@@ -25,6 +25,7 @@ new CodeWaveEvaluator(config: EvaluatorConfig)
 ```
 
 **Parameters:**
+
 ```typescript
 interface EvaluatorConfig {
   // LLM Configuration
@@ -34,21 +35,22 @@ interface EvaluatorConfig {
   apiBaseUrl?: string;
 
   // Evaluation Configuration
-  maxTokensPerRequest?: number;        // default: 4000
-  enableRag?: boolean;                 // default: true
-  ragChunkSize?: number;               // default: 2000
-  ragThreshold?: number;               // default: 102400 (100KB)
+  maxTokensPerRequest?: number; // default: 4000
+  enableRag?: boolean; // default: true
+  ragChunkSize?: number; // default: 2000
+  ragThreshold?: number; // default: 102400 (100KB)
 
   // Output Configuration
-  outputDirectory?: string;             // default: '.evaluated-commits'
+  outputDirectory?: string; // default: '.evaluated-commits'
   reportFormat?: 'html' | 'json' | 'markdown' | 'all'; // default: 'all'
 
   // Logging
-  verbose?: boolean;                   // default: false
+  verbose?: boolean; // default: false
 }
 ```
 
 **Example:**
+
 ```typescript
 import { CodeWaveEvaluator } from 'codewave';
 
@@ -68,20 +70,22 @@ const evaluator = new CodeWaveEvaluator({
 Evaluate a single commit.
 
 **Parameters:**
+
 - `commitHash` (string): Git commit hash, reference, or branch name
 - `options` (optional):
   ```typescript
   interface EvaluationOptions {
-    repoPath?: string;              // Git repository path (default: current dir)
-    outputDir?: string;             // Override config output directory
-    skipReport?: boolean;           // Skip HTML report generation
-    verbose?: boolean;              // Override verbose setting
+    repoPath?: string; // Git repository path (default: current dir)
+    outputDir?: string; // Override config output directory
+    skipReport?: boolean; // Skip HTML report generation
+    verbose?: boolean; // Override verbose setting
   }
   ```
 
 **Returns:** `Promise<EvaluationResult>`
 
 **Example:**
+
 ```typescript
 const result = await evaluator.evaluate('HEAD', {
   repoPath: '/path/to/repo',
@@ -97,23 +101,25 @@ console.log(`Test Coverage: ${result.metrics.testCoverage}/10`);
 Evaluate multiple commits with progress tracking.
 
 **Parameters:**
+
 ```typescript
 interface BatchEvaluationOptions {
-  count?: number;                  // Number of commits (default: 10)
-  since?: string;                  // Start date (ISO or natural language)
-  until?: string;                  // End date (ISO or natural language)
-  branch?: string;                 // Branch to evaluate (default: current)
-  repoPath?: string;               // Git repository path
-  outputDir?: string;              // Override config output directory
-  parallel?: number;               // Parallel evaluations (default: 3, max: 5)
-  skipErrors?: boolean;            // Continue on errors (default: false)
-  onProgress?: (update: ProgressUpdate) => void;  // Progress callback
+  count?: number; // Number of commits (default: 10)
+  since?: string; // Start date (ISO or natural language)
+  until?: string; // End date (ISO or natural language)
+  branch?: string; // Branch to evaluate (default: current)
+  repoPath?: string; // Git repository path
+  outputDir?: string; // Override config output directory
+  parallel?: number; // Parallel evaluations (default: 3, max: 5)
+  skipErrors?: boolean; // Continue on errors (default: false)
+  onProgress?: (update: ProgressUpdate) => void; // Progress callback
 }
 ```
 
 **Returns:** `Promise<BatchEvaluationResult>`
 
 **Example:**
+
 ```typescript
 const batchResult = await evaluator.evaluateBatch({
   count: 50,
@@ -166,6 +172,7 @@ const response = await analyst.assessCommit({
 ```
 
 **Evaluates:**
+
 - Functional Impact (1-10)
 - Ideal Time Hours
 
@@ -178,6 +185,7 @@ const author = new DeveloperAuthorAgent(llmService);
 ```
 
 **Evaluates:**
+
 - Actual Time Hours
 
 #### 3. Developer Reviewer (🔍)
@@ -189,6 +197,7 @@ const reviewer = new DeveloperReviewerAgent(llmService);
 ```
 
 **Evaluates:**
+
 - Code Quality (1-10)
 
 #### 4. Senior Architect (🏛️)
@@ -200,6 +209,7 @@ const architect = new SeniorArchitectAgent(llmService);
 ```
 
 **Evaluates:**
+
 - Code Complexity (10-1, inverted)
 - Technical Debt Hours (+/-)
 
@@ -212,6 +222,7 @@ const qaEngineer = new QAEngineerAgent(llmService);
 ```
 
 **Evaluates:**
+
 - Test Coverage (1-10)
 
 ---
@@ -242,7 +253,7 @@ interface EvaluationResult {
   metadata: {
     startTime: Date;
     endTime: Date;
-    duration: number;  // milliseconds
+    duration: number; // milliseconds
     tokensUsed: number;
     estimatedCost: number;
     model: string;
@@ -255,18 +266,18 @@ interface EvaluationResult {
 
 ```typescript
 interface EvaluationMetrics {
-  codeQuality: number;              // 1-10 (Developer Reviewer)
-  codeComplexity: number;           // 10-1 inverted (Senior Architect)
-  idealTimeHours: number;           // Hours (Business Analyst)
-  actualTimeHours: number;          // Hours (Developer Author)
-  technicalDebtHours: number;       // +/- Hours (Senior Architect)
-  functionalImpact: number;         // 1-10 (Business Analyst)
-  testCoverage: number;             // 1-10 (QA Engineer)
+  codeQuality: number; // 1-10 (Developer Reviewer)
+  codeComplexity: number; // 10-1 inverted (Senior Architect)
+  idealTimeHours: number; // Hours (Business Analyst)
+  actualTimeHours: number; // Hours (Developer Author)
+  technicalDebtHours: number; // +/- Hours (Senior Architect)
+  functionalImpact: number; // 1-10 (Business Analyst)
+  testCoverage: number; // 1-10 (QA Engineer)
 
   // Derived metrics
-  productivityRatio: number;        // actual / ideal
-  qualityScore: number;             // Weighted composite
-  overallScore: number;             // Final consensus score
+  productivityRatio: number; // actual / ideal
+  qualityScore: number; // Weighted composite
+  overallScore: number; // Final consensus score
 }
 ```
 
@@ -291,7 +302,7 @@ interface AgentResponse {
   response: string;
   metrics: Record<string, number>;
   concerns?: string[];
-  confidence: number;  // 0-100
+  confidence: number; // 0-100
   reasoning: string;
 }
 ```
@@ -338,12 +349,12 @@ interface ConsensusData {
 
 ```typescript
 interface OutputFiles {
-  htmlReport?: string;              // Path to HTML report
-  jsonResults?: string;             // Path to JSON results
-  markdownTranscript?: string;      // Path to markdown transcript
-  diffFile?: string;                // Path to original diff
-  summaryFile?: string;             // Path to text summary
-  directory: string;                // Output directory
+  htmlReport?: string; // Path to HTML report
+  jsonResults?: string; // Path to JSON results
+  markdownTranscript?: string; // Path to markdown transcript
+  diffFile?: string; // Path to original diff
+  summaryFile?: string; // Path to text summary
+  directory: string; // Output directory
 }
 ```
 
@@ -360,7 +371,7 @@ interface LLMService {
   generateMessage(
     systemPrompt: string,
     userMessage: string,
-    options?: GenerateOptions,
+    options?: GenerateOptions
   ): Promise<string>;
 
   countTokens(text: string): Promise<number>;
@@ -380,7 +391,7 @@ interface CommitService {
     since: string,
     until: string,
     branch?: string,
-    repoPath?: string,
+    repoPath?: string
   ): Promise<CommitData[]>;
   getDiff(hash: string, repoPath?: string): Promise<string>;
 }
@@ -423,11 +434,11 @@ async function evaluateSingleCommit() {
     console.log(`Test Coverage: ${result.metrics.testCoverage}/10`);
     console.log(`Quality Score: ${result.metrics.qualityScore}/10`);
     console.log(`\nTop Concerns:`);
-    result.consensus.topConcerns.forEach(concern => {
+    result.consensus.topConcerns.forEach((concern) => {
       console.log(`  • ${concern}`);
     });
     console.log(`\nRecommendations:`);
-    result.consensus.recommendations.forEach(rec => {
+    result.consensus.recommendations.forEach((rec) => {
       console.log(`  • ${rec}`);
     });
   } catch (error) {
@@ -472,7 +483,7 @@ async function batchEvaluation() {
 
     if (result.errors.length > 0) {
       console.log('\n=== Errors ===');
-      result.errors.forEach(err => {
+      result.errors.forEach((err) => {
         console.log(`  [${err.commitHash}] ${err.message}`);
       });
     }
@@ -487,11 +498,7 @@ batchEvaluation();
 ### Example 3: Custom Agent Workflow
 
 ```typescript
-import {
-  CodeWaveEvaluator,
-  DeveloperReviewerAgent,
-  QAEngineerAgent,
-} from 'codewave';
+import { CodeWaveEvaluator, DeveloperReviewerAgent, QAEngineerAgent } from 'codewave';
 
 async function customWorkflow() {
   const evaluator = new CodeWaveEvaluator({
@@ -536,22 +543,20 @@ async function cicdQualityGate() {
 
   if (result.metrics.codeQuality < qualityThreshold) {
     console.error(
-      `❌ Code Quality ${result.metrics.codeQuality}/10 below threshold ${qualityThreshold}`,
+      `❌ Code Quality ${result.metrics.codeQuality}/10 below threshold ${qualityThreshold}`
     );
     failed = true;
   }
 
   if (result.metrics.testCoverage < coverageThreshold) {
     console.error(
-      `❌ Test Coverage ${result.metrics.testCoverage}/10 below threshold ${coverageThreshold}`,
+      `❌ Test Coverage ${result.metrics.testCoverage}/10 below threshold ${coverageThreshold}`
     );
     failed = true;
   }
 
   if (result.metrics.technicalDebtHours > 10) {
-    console.error(
-      `❌ Technical Debt ${result.metrics.technicalDebtHours}h exceeds limit 10h`,
-    );
+    console.error(`❌ Technical Debt ${result.metrics.technicalDebtHours}h exceeds limit 10h`);
     failed = true;
   }
 
@@ -583,16 +588,13 @@ async function analyzeResults() {
   const result = await evaluator.evaluate('HEAD');
 
   // Save results as JSON
-  fs.writeFileSync(
-    'evaluation-results.json',
-    JSON.stringify(result, null, 2),
-  );
+  fs.writeFileSync('evaluation-results.json', JSON.stringify(result, null, 2));
 
   // Analyze conversation
   console.log('=== Conversation Analysis ===');
-  result.rounds.forEach(round => {
+  result.rounds.forEach((round) => {
     console.log(`\n--- Round ${round.roundNumber}: ${round.roundName} ---`);
-    round.agentResponses.forEach(response => {
+    round.agentResponses.forEach((response) => {
       console.log(`${response.emoji} ${response.agentName}`);
       console.log(`   Confidence: ${response.confidence}%`);
       console.log(`   Reasoning: ${response.reasoning.substring(0, 100)}...`);
@@ -618,9 +620,9 @@ function formatConversation(result: EvaluationResult): string {
   md += `| Test Coverage | ${result.metrics.testCoverage}/10 |\n`;
   md += `| Quality Score | ${result.metrics.qualityScore}/10 |\n\n`;
 
-  result.rounds.forEach(round => {
+  result.rounds.forEach((round) => {
     md += `## Round ${round.roundNumber}: ${round.roundName}\n\n`;
-    round.agentResponses.forEach(response => {
+    round.agentResponses.forEach((response) => {
       md += `### ${response.emoji} ${response.agentName}\n\n`;
       md += `${response.response}\n\n`;
     });
@@ -711,6 +713,7 @@ const evaluator = new CodeWaveEvaluator({
 ---
 
 For more details on specific functionality, see related documentation:
+
 - [CLI.md](./CLI.md) - Command-line interface
 - [AGENTS.md](./AGENTS.md) - Agent specifications
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture

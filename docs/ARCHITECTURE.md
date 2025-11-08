@@ -114,6 +114,7 @@ CodeWave is a multi-tier, event-driven system for AI-powered code review that co
 ## Technology Stack
 
 ### Runtime & Language
+
 - **Node.js**: 18.0.0+
 - **TypeScript**: 5.3.3+
 - **Runtime**: CommonJS modules
@@ -121,6 +122,7 @@ CodeWave is a multi-tier, event-driven system for AI-powered code review that co
 ### Core Dependencies
 
 #### AI & LLM Integration
+
 - **LangChain** (v0.3.36): Chain and agent orchestration
 - **LangGraph** (v0.2.74): State machine and workflow management
 - **@langchain/anthropic**: Claude API integration
@@ -129,6 +131,7 @@ CodeWave is a multi-tier, event-driven system for AI-powered code review that co
 - **js-tiktoken**: Token counting for OpenAI models
 
 #### CLI & UI
+
 - **Commander.js** (v14.0.2): Command-line framework
 - **Inquirer.js** (v8.2.7): Interactive CLI prompts
 - **Chalk** (v4.1.2): Terminal color output
@@ -136,9 +139,11 @@ CodeWave is a multi-tier, event-driven system for AI-powered code review that co
 - **cli-progress** (v3.12.0): Progress bars
 
 #### Utilities
+
 - **dotenv** (v17.2.3): Environment variable management
 
 ### Development Dependencies
+
 - **TypeScript**: Type system
 - **ESLint**: Code linting
 - **Prettier**: Code formatting
@@ -153,6 +158,7 @@ CodeWave is a multi-tier, event-driven system for AI-powered code review that co
 Entry point for user interactions. Handles command routing and user-facing logic.
 
 #### Files:
+
 - `cli/index.ts` - Main CLI entry point (Commander setup)
 - `cli/commands/evaluate-command.ts` - Single commit evaluation
 - `cli/commands/batch-evaluate-command.ts` - Multiple commits
@@ -161,6 +167,7 @@ Entry point for user interactions. Handles command routing and user-facing logic
 - `cli/utils/shared.utils.ts` - CLI utilities
 
 #### Responsibilities:
+
 - Parse command-line arguments
 - Display interactive setup wizard
 - Manage user configuration
@@ -172,6 +179,7 @@ Entry point for user interactions. Handles command routing and user-facing logic
 Specialized AI agents with distinct expertise areas.
 
 #### Architecture:
+
 ```
 BaseAgentWorkflow (Abstract)
   ├── BusinessAnalystAgent
@@ -184,6 +192,7 @@ BaseAgentWorkflow (Abstract)
 #### Key Classes:
 
 **BaseAgentWorkflow**
+
 ```typescript
 abstract class BaseAgentWorkflow {
   abstract name: string;
@@ -201,6 +210,7 @@ abstract class BaseAgentWorkflow {
 ```
 
 #### Workflow:
+
 1. Receive commit context and conversation history
 2. Generate specialized prompt based on agent role
 3. Call LLM service with prompt
@@ -270,12 +280,13 @@ Multi-provider LLM abstraction.
 #### Key Classes:
 
 **LLMService (Interface)**
+
 ```typescript
 interface LLMService {
   generateMessage(
     systemPrompt: string,
     userMessage: string,
-    options?: GenerateOptions,
+    options?: GenerateOptions
   ): Promise<string>;
 
   countTokens(text: string): Promise<number>;
@@ -284,11 +295,13 @@ interface LLMService {
 ```
 
 **Provider Implementations**:
+
 - `AnthropicLLMService` - Claude API
 - `OpenAILLMService` - GPT-4, GPT-4 Turbo
 - `GoogleLLMService` - Gemini
 
 #### Token Management (`TokenManager`):
+
 ```typescript
 class TokenManager {
   countTokens(text: string, model: string): number;
@@ -301,6 +314,7 @@ class TokenManager {
 ### 5. Storage & Services Layer
 
 #### Git Service
+
 ```typescript
 class CommitService {
   getCommit(hash: string): Promise<CommitData>;
@@ -310,6 +324,7 @@ class CommitService {
 ```
 
 #### Vector Store Service (RAG)
+
 ```typescript
 class VectorStoreService {
   addDocuments(texts: string[], metadata: Record<string, any>): Promise<void>;
@@ -319,6 +334,7 @@ class VectorStoreService {
 ```
 
 #### Evaluation Service
+
 ```typescript
 class EvaluationService {
   saveEvaluation(result: EvaluationResult): Promise<string>;
@@ -332,6 +348,7 @@ class EvaluationService {
 #### Formatters:
 
 **HTMLReportFormatterEnhanced**
+
 - Generates interactive HTML reports
 - Timeline visualization
 - Agent role identification
@@ -339,11 +356,13 @@ class EvaluationService {
 - Bootstrap-based responsive design
 
 **JSONFormatter**
+
 - Structured data export
 - Schema-validated output
 - Complete conversation history
 
 **MarkdownFormatter**
+
 - Human-readable transcripts
 - Suitable for documentation
 - Git-compatible format
@@ -463,9 +482,9 @@ interface ConversationState {
 ```typescript
 async function executeRound(
   round: 1 | 2 | 3,
-  state: ConversationState,
+  state: ConversationState
 ): Promise<ConversationState> {
-  const roundPromises = agents.map(agent => {
+  const roundPromises = agents.map((agent) => {
     const prompt = buildPrompt(agent, round, state);
     return agent.respond(prompt, state);
   });
@@ -483,6 +502,7 @@ async function executeRound(
 ### Agent Context Management
 
 Each agent receives context including:
+
 1. **Commit Data**: Files, changes, metadata
 2. **Previous Responses**: What other agents said
 3. **Conversation History**: Full transcript
@@ -535,7 +555,7 @@ const generateDeveloperOverview = async (state: GraphState) => {
 
   return {
     ...state,
-    developerOverview: overview
+    developerOverview: overview,
   };
 };
 
@@ -556,6 +576,7 @@ graph.addEdge('generateDeveloperOverview', 'round1Agents');
 ### Error Handling
 
 If generation fails:
+
 - Empty overview provided to agents
 - Agents evaluate using raw diff
 - Report shows placeholder message
@@ -578,9 +599,9 @@ interface ConvergenceMetrics {
   perMetric: {
     [metric: string]: number; // 0-1, lower variance = higher consensus
   };
-  weighted: number;            // Final convergence score
-  targetMet: boolean;         // Did we reach target?
-  shouldContinue: boolean;    // Continue to next round?
+  weighted: number; // Final convergence score
+  targetMet: boolean; // Did we reach target?
+  shouldContinue: boolean; // Continue to next round?
 }
 
 class ConvergenceCalculator {
@@ -600,6 +621,7 @@ class ConvergenceCalculator {
 ### Algorithm Steps
 
 **Step 1: Extract Final Scores for Each Metric**
+
 ```
 Code Quality scores: [7, 7, 8, 6, 7]
 Test Coverage scores: [6, 5, 7, 5, 6]
@@ -607,6 +629,7 @@ Test Coverage scores: [6, 5, 7, 5, 6]
 ```
 
 **Step 2: Calculate Variance per Metric**
+
 ```
 StdDev(Code Quality) = 0.6 → Normalized = 0.15 (low variance = high agreement)
 StdDev(Test Coverage) = 0.8 → Normalized = 0.20
@@ -614,6 +637,7 @@ StdDev(Test Coverage) = 0.8 → Normalized = 0.20
 ```
 
 **Step 3: Apply Weights**
+
 ```
 Weighted Convergence = 1.0 - (
   0.15 * 2.0 (quality weight) +
@@ -623,6 +647,7 @@ Weighted Convergence = 1.0 - (
 ```
 
 **Step 4: Compare to Target & Decide**
+
 ```
 if (convergenceScore >= 0.75) {
   return { shouldContinue: false, targetMet: true };
@@ -719,11 +744,13 @@ class LLMFactory {
 ### Token Counting Strategy
 
 Different models have different token counting:
+
 - **Claude**: Uses js-tiktoken or Claude API token count
 - **GPT-4**: Uses js-tiktoken
 - **Gemini**: Uses Gemini API token count
 
 Each call is tracked:
+
 ```typescript
 interface TokenTrack {
   requestTokens: number;
@@ -739,8 +766,8 @@ interface TokenTrack {
 ```typescript
 const costModel = {
   'claude-3-5-sonnet-20241022': {
-    input: 0.003 / 1000,   // $0.003 per 1K tokens
-    output: 0.015 / 1000,  // $0.015 per 1K tokens
+    input: 0.003 / 1000, // $0.003 per 1K tokens
+    output: 0.015 / 1000, // $0.015 per 1K tokens
   },
   'gpt-4o': {
     input: 0.015 / 1000,
@@ -752,7 +779,7 @@ const costModel = {
   },
 };
 
-cost = (inputTokens * costModel.input) + (outputTokens * costModel.output);
+cost = inputTokens * costModel.input + outputTokens * costModel.output;
 ```
 
 ---
@@ -801,28 +828,28 @@ if (diffSize > ragThreshold) {
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <!-- Bootstrap CSS -->
-  <!-- Custom styles -->
-</head>
-<body>
-  <header>
-    <!-- Commit metadata -->
-    <!-- Overall quality score -->
-  </header>
+  <head>
+    <!-- Bootstrap CSS -->
+    <!-- Custom styles -->
+  </head>
+  <body>
+    <header>
+      <!-- Commit metadata -->
+      <!-- Overall quality score -->
+    </header>
 
-  <main>
-    <!-- Metrics cards -->
-    <!-- Agent profiles -->
-    <!-- Round-by-round timeline -->
-    <!-- Concerns and recommendations -->
-  </main>
+    <main>
+      <!-- Metrics cards -->
+      <!-- Agent profiles -->
+      <!-- Round-by-round timeline -->
+      <!-- Concerns and recommendations -->
+    </main>
 
-  <aside>
-    <!-- Conversation transcript -->
-    <!-- Full metrics table -->
-  </aside>
-</body>
+    <aside>
+      <!-- Conversation transcript -->
+      <!-- Full metrics table -->
+    </aside>
+  </body>
 </html>
 ```
 
@@ -933,16 +960,19 @@ try {
 ### Error Categories
 
 **Recoverable Errors** (retry or skip):
+
 - Network timeouts
 - Rate limiting (retry with backoff)
 - Temporary API failures
 
 **Non-Recoverable Errors** (halt or skip):
+
 - Invalid commit hash
 - Authentication failures
 - Corrupted diff data
 
 **Warnings** (continue with caution):
+
 - Large diffs requiring RAG
 - Unusual complexity patterns
 - High divergence between agents
@@ -1007,6 +1037,7 @@ Continue Processing
 ---
 
 For more information:
+
 - [README.md](../README.md) - Main documentation
 - [AGENTS.md](./AGENTS.md) - Agent specifications
 - [API.md](./API.md) - Programmatic API
