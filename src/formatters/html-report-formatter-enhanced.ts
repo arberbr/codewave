@@ -238,6 +238,68 @@ function calculateMetricEvolution(groupedResults: Map<string, AgentEvaluation[]>
 }
 
 /**
+ * Calculate consensus values with contributor tracking
+ */
+function calculateConsensusValues(groupedResults: Map<string, AgentEvaluation[]>): Map<string, { value: number; contributors: Array<{ name: string; score: number; weight: number }> }> {
+  const { getAgentWeight, calculateWeightedAverage, SEVEN_PILLARS } = require('../constants/agent-weights.constants');
+
+  // Collect metrics
+  const allMetrics = new Set<string>();
+  groupedResults.forEach(evaluations => {
+    evaluations.forEach(evaluation => {
+      if (evaluation.metrics) {
+        Object.keys(evaluation.metrics)
+          .filter(metric => SEVEN_PILLARS.includes(metric))
+          .forEach(metric => allMetrics.add(metric));
+      }
+    });
+  });
+
+  // Build agent-metric matrix and agentName -> agentRole mapping
+  const agentMetrics = new Map<string, Map<string, number>>();
+  const agentRoleMap = new Map<string, string>();
+  groupedResults.forEach((evaluations, agentName) => {
+    const latestEval = evaluations[evaluations.length - 1];
+    if (latestEval.metrics) {
+      const filteredMetrics = Object.fromEntries(
+        Object.entries(latestEval.metrics)
+          .filter(([metric, value]) => SEVEN_PILLARS.includes(metric) && typeof value === 'number')
+      );
+      agentMetrics.set(agentName, new Map(Object.entries(filteredMetrics)));
+    }
+    if (latestEval.agentRole) {
+      agentRoleMap.set(agentName, latestEval.agentRole);
+    }
+  });
+
+  // Calculate weighted averages for final values
+  const finalValues = new Map<string, { value: number; contributors: Array<{ name: string; score: number; weight: number }> }>();
+  allMetrics.forEach(metric => {
+    const contributors: Array<{ name: string; score: number; weight: number }> = [];
+    agentMetrics.forEach((metrics, agentName) => {
+      if (metrics.has(metric)) {
+        const score = metrics.get(metric)!;
+        const agentKey = agentRoleMap.get(agentName) || agentName;
+        const weight = getAgentWeight(agentKey, metric);
+        contributors.push({ name: agentName, score, weight });
+      }
+    });
+    if (contributors.length > 0) {
+      const weightedAvg = calculateWeightedAverage(
+        contributors.map(c => ({
+          agentName: agentRoleMap.get(c.name) || c.name,
+          score: c.score
+        })),
+        metric
+      );
+      finalValues.set(metric, { value: weightedAvg, contributors });
+    }
+  });
+
+  return finalValues;
+}
+
+/**
  * Build comprehensive metrics table showing all agent contributions
  */
 function buildMetricsTable(groupedResults: Map<string, AgentEvaluation[]>): string {
@@ -574,15 +636,18 @@ export function generateEnhancedHtmlReport(
   const evaluationHistory = loadEvaluationHistory(outputDir);
   const historyHtml = generateHistoryHtml(evaluationHistory);
 
-  // Aggregate final pillar scores
+  // Calculate consensus values and aggregate final pillar scores
+  const consensusValues = calculateConsensusValues(groupedResults);
   const finalPillarScores: Record<string, { value: number; agent: string }> = {};
-  groupedResults.forEach((evaluations, agentName) => {
-    const latestEval = evaluations[evaluations.length - 1];
-    if (latestEval.metrics) {
-      Object.entries(latestEval.metrics).forEach(([metric, value]) => {
-        finalPillarScores[metric] = { value, agent: agentName };
-      });
-    }
+  consensusValues.forEach((data, metric) => {
+    // Find the agent with the highest weight contribution to this metric
+    const topContributor = data.contributors.reduce((max: any, current: any) =>
+      current.weight > max.weight ? current : max
+    );
+    finalPillarScores[metric] = {
+      value: data.value,  // Use the weighted average consensus value
+      agent: topContributor.name  // Use the agent with highest influence
+    };
   });
 
   // Generate 7-Pillar Summary Card

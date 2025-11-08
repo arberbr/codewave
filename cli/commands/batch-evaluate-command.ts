@@ -3,6 +3,7 @@ import { execSync, spawnSync } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import pLimit from 'p-limit';
+import inquirer from 'inquirer';
 import { AppConfig } from '../../src/config/config.interface';
 import { loadConfig } from '../../src/config/config-loader';
 import { CommitEvaluationOrchestrator } from '../../src/orchestrator/commit-evaluation-orchestrator';
@@ -16,6 +17,7 @@ import {
     printBatchCompletionMessage,
 } from '../utils/shared.utils';
 import { ProgressTracker } from '../utils/progress-tracker';
+import { CostEstimatorService } from '../../src/services/cost-estimator.service';
 
 interface CommitInfo {
     hash: string;
@@ -80,6 +82,29 @@ export async function runBatchEvaluateCommand(args: string[]) {
     console.log(`📊 Analysis depth: ${depthModeLabel[config.agents.depthMode]}\n`);
 
     console.log(`📁 Evaluating commits into: .evaluated-commits/\n`);
+
+    // Estimate cost before proceeding
+    const estimator = new CostEstimatorService(config);
+    const costEstimate = estimator.estimateForCommits(commits.length);
+    if (costEstimate !== null) {
+        estimator.printEstimate(costEstimate, commits.length);
+
+        const { proceed } = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'proceed',
+                message: `Continue with evaluation? (estimated cost: ${estimator.formatAverageCost(costEstimate)})`,
+                default: true,
+            },
+        ]);
+
+        if (!proceed) {
+            console.log('\n❌ Batch evaluation cancelled.\n');
+            process.exit(0);
+        }
+    }
+
+    console.log();
 
     // Initialize orchestrator with all agents
     const agentRegistry = createAgentRegistry(config);
