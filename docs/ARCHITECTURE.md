@@ -9,11 +9,13 @@ Complete technical architecture documentation for CodeWave system.
 3. [Core Components](#core-components)
 4. [Data Flow](#data-flow)
 5. [Multi-Agent Orchestration](#multi-agent-orchestration)
-6. [LLM Integration](#llm-integration)
-7. [RAG System](#rag-system)
-8. [Output Generation](#output-generation)
-9. [State Management](#state-management)
-10. [Error Handling](#error-handling)
+6. [Developer Overview Generation](#developer-overview-generation)
+7. [Convergence Detection Algorithm](#convergence-detection-algorithm)
+8. [LLM Integration](#llm-integration)
+9. [RAG System](#rag-system)
+10. [Output Generation](#output-generation)
+11. [State Management](#state-management)
+12. [Error Handling](#error-handling)
 
 ---
 
@@ -486,6 +488,205 @@ Each agent receives context including:
 3. **Conversation History**: Full transcript
 4. **Shared Metrics**: Emerging consensus
 5. **Agent Role**: Their specific responsibility
+
+---
+
+## Developer Overview Generation
+
+### Architecture
+
+Developer Overview runs as the **first node** in the LangGraph workflow, before any agent evaluation:
+
+```
+Commit Input
+  │
+  ▼
+┌──────────────────────────────┐
+│ Developer Overview Generator │ ◄─── First Node
+│  ┌─────────────────────────┐ │
+│  │ - Extract key changes   │ │
+│  │ - Identify file purposes│ │
+│  │ - Generate summary      │ │
+│  │ - Format for readability│ │
+│  └─────────────────────────┘ │
+└──────────────────────────────┘
+  │
+  ├─► Stored in State (all agents access)
+  │
+  ▼
+Agents Begin Evaluation (Round 1)
+```
+
+### Implementation
+
+**Location**: `src/orchestrator/commit-evaluation-graph.ts`
+
+```typescript
+// First node in graph
+const generateDeveloperOverview = async (state: GraphState) => {
+  console.log('📝 Generating developer overview from commit diff...');
+
+  const overview = await developerOverviewGenerator.generate(
+    state.commitDiff,
+    state.commitMetadata
+  );
+
+  console.log(`✅ Developer overview generated (${overview.length} chars)`);
+
+  return {
+    ...state,
+    developerOverview: overview
+  };
+};
+
+// Add to graph
+graph.addNode('generateDeveloperOverview', generateDeveloperOverview);
+graph.setEntryPoint('generateDeveloperOverview');
+graph.addEdge('generateDeveloperOverview', 'round1Agents');
+```
+
+### Benefits
+
+1. **Shared Context**: All agents see same overview
+2. **Consistency**: Same summary regardless of agent disagreement
+3. **Token Efficiency**: Overview reduces needed context
+4. **Debugging**: Clear record of what was analyzed
+5. **Documentation**: Auto-generated change summary
+
+### Error Handling
+
+If generation fails:
+- Empty overview provided to agents
+- Agents evaluate using raw diff
+- Report shows placeholder message
+- Evaluation continues without blocking
+
+---
+
+## Convergence Detection Algorithm
+
+### Purpose
+
+Measure how much agents agree and optimize evaluation rounds.
+
+### Implementation
+
+**Location**: `src/orchestrator/convergence-calculator.ts`
+
+```typescript
+interface ConvergenceMetrics {
+  perMetric: {
+    [metric: string]: number; // 0-1, lower variance = higher consensus
+  };
+  weighted: number;            // Final convergence score
+  targetMet: boolean;         // Did we reach target?
+  shouldContinue: boolean;    // Continue to next round?
+}
+
+class ConvergenceCalculator {
+  calculate(
+    round1Responses: AgentResponse[],
+    round2Responses: AgentResponse[],
+    round3Responses?: AgentResponse[]
+  ): ConvergenceMetrics {
+    // 1. Calculate metric variance for each pillar
+    // 2. Apply weights (quality and coverage are 2x weight)
+    // 3. Compare to target threshold (0.75)
+    // 4. Determine if consensus reached or should continue
+  }
+}
+```
+
+### Algorithm Steps
+
+**Step 1: Extract Final Scores for Each Metric**
+```
+Code Quality scores: [7, 7, 8, 6, 7]
+Test Coverage scores: [6, 5, 7, 5, 6]
+... (for all 7 pillars)
+```
+
+**Step 2: Calculate Variance per Metric**
+```
+StdDev(Code Quality) = 0.6 → Normalized = 0.15 (low variance = high agreement)
+StdDev(Test Coverage) = 0.8 → Normalized = 0.20
+... (aggregate remaining metrics)
+```
+
+**Step 3: Apply Weights**
+```
+Weighted Convergence = 1.0 - (
+  0.15 * 2.0 (quality weight) +
+  0.20 * 2.0 (coverage weight) +
+  ... (other metrics with 1x weight)
+) / total_weight
+```
+
+**Step 4: Compare to Target & Decide**
+```
+if (convergenceScore >= 0.75) {
+  return { shouldContinue: false, targetMet: true };
+} else if (currentRound < 3) {
+  return { shouldContinue: true, targetMet: false };
+} else {
+  return { shouldContinue: false, targetMet: false };
+}
+```
+
+### Convergence Thresholds
+
+```
+0.9+:  Excellent consensus, very reliable evaluation
+0.7-0.8: Good consensus, minor disagreements acceptable
+0.5-0.6: Moderate agreement, review disagreements
+<0.5:   Low consensus, significant debate ongoing
+```
+
+### Round Continuation Logic
+
+```
+Round 1 Output → Calculate Convergence
+  │
+  ├─ If >= 0.75: STOP ✓ (High confidence)
+  └─ If < 0.75:  Continue to Round 2
+
+Round 2 Output → Calculate Convergence
+  │
+  ├─ If >= 0.75: STOP ✓ (Good agreement reached)
+  ├─ If improved but < 0.75: Continue to Round 3
+  └─ If no improvement: STOP (Max rounds reached)
+
+Round 3 Output → Final Convergence
+  │
+  └─► STOP (Always stop after Round 3)
+```
+
+### Storage in History
+
+Each evaluation stores convergence:
+
+```json
+{
+  "evaluationNumber": 7,
+  "timestamp": "2025-11-08T22:58:27.689Z",
+  "convergenceScore": 0.51,
+  "metrics": { ... },
+  "rounds": {
+    "round1": {
+      "convergence": 0.45,
+      "shouldContinue": true
+    },
+    "round2": {
+      "convergence": 0.62,
+      "shouldContinue": true
+    },
+    "round3": {
+      "convergence": 0.51,
+      "shouldContinue": false
+    }
+  }
+}
+```
 
 ---
 

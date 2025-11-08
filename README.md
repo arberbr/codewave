@@ -393,6 +393,50 @@ Agents finalize their positions, considering all previous inputs. Final scores a
 
 ---
 
+## Developer Overview
+
+Every evaluation begins with an **AI-generated Developer Overview** - a concise, intelligent summary of what changed in the commit, automatically extracted and formatted before agents evaluate.
+
+### What's Included
+
+The Developer Overview contains:
+- **Summary**: One-line executive summary of the change (max 150 chars)
+- **Details**: Paragraph explaining key changes and context (max 400 chars)
+- **Key Changes**: Bullet list of implementation details
+
+### Example
+
+```
+Summary: Added actual estimation as a separate step
+
+Details:
+Introduced actual time estimation alongside ideal time in PR analysis
+for better accuracy.
+
+Key Changes:
+- Implemented IActualTimeEstimator interface
+- Created ActualTimeRunnable for estimation
+- Merged actual time with PR lifecycle data
+```
+
+### Where It Appears
+
+- **HTML Report**: Top card in the report
+- **results.json**: `developerOverview` field
+- **Agent Context**: All agents receive this as context for their evaluation
+
+### Why It Matters
+
+The Developer Overview provides:
+- **Quick Context**: Understand the change without reading the full diff
+- **Consistency**: Same summary regardless of agent disagreement
+- **CI/CD Integration**: Programmatic access to change summary
+- **Documentation**: Auto-generated change documentation
+
+For detailed information about Developer Overview generation, convergence detection, and multi-round discussion, see [ADVANCED_FEATURES.md](./docs/ADVANCED_FEATURES.md).
+
+---
+
 ## Advanced Features
 
 ### Retrieval-Augmented Generation (RAG) for Large Diffs

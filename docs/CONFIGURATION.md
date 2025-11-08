@@ -500,6 +500,161 @@ codewave config set parallel-evaluations 3
 
 ---
 
+## Model Display and LLM Information
+
+### Viewing Which Model is Being Used
+
+The HTML report displays which LLM model was used for each evaluation:
+
+**In HTML Report:**
+- Look at the top of the "Evaluation History" tab header
+- Shows format: `🤖 provider/model` (e.g., `🤖 openai/gpt-4o-mini`)
+- Helps track which model generated each evaluation
+
+### Switching Models
+
+**Change Default Model:**
+```bash
+codewave config set model claude-sonnet-4-5-20250929
+```
+
+**Override for Single Evaluation:**
+```bash
+codewave evaluate HEAD --model gpt-4o-mini
+```
+
+**Switch to Different Provider:**
+```bash
+# Switch to OpenAI
+codewave config set llm-provider openai
+codewave config set api-key sk-...
+codewave config set model gpt-4o-mini
+
+# Switch back to Anthropic
+codewave config set llm-provider anthropic
+```
+
+### Model Performance Comparison
+
+| Model | Provider | Speed | Quality | Cost | Best For |
+|-------|----------|-------|---------|------|----------|
+| Haiku 4.5 | Anthropic | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ | Budget-conscious, large batches |
+| Sonnet 4.5 | Anthropic | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | Balanced (recommended) |
+| Opus 4.1 | Anthropic | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | Maximum accuracy |
+| GPT-4o-mini | OpenAI | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | Cost-effective alternative |
+| GPT-4o | OpenAI | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | High quality |
+| Gemini 2.0 Flash | Google | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Most cost-effective |
+
+---
+
+## Cost Tracking and Token Usage
+
+### Understanding Token Usage
+
+Every evaluation displays token information:
+
+**In HTML Report:**
+- Check the "Evaluation History" tab
+- Shows: Input Tokens + Output Tokens = Total Tokens
+- See cumulative cost for all evaluations
+
+**In results.json:**
+```json
+{
+  "tokenUsage": {
+    "inputTokens": 54128,
+    "outputTokens": 1512,
+    "totalTokens": 55640
+  },
+  "totalCost": 0.1851
+}
+```
+
+### Cost Estimation by Model
+
+**Per Single Commit Evaluation:**
+
+```
+Haiku 4.5:        $0.01-0.03    (most affordable)
+Gemini 2.0 Flash: $0.02-0.04
+Sonnet 4.5:       $0.05-0.15
+GPT-4o-mini:      $0.02-0.05
+GPT-4o:           $0.10-0.30
+Opus 4.1:         $0.10-0.50    (most expensive)
+```
+
+**For Batch Processing:**
+
+```
+50 commits with Haiku:     $0.50-1.50
+100 commits with Sonnet:   $5-15
+1,000 commits with Gemini: $20-40
+```
+
+### Tracking Total Costs
+
+**Extract cost from all evaluations:**
+```bash
+# Sum costs from all evaluations
+jq -s '[.[].totalCost] | add' .evaluated-commits/*/results.json
+
+# Get cost per commit
+for file in .evaluated-commits/*/results.json; do
+  commit=$(jq -r '.metadata.commitHash' "$file" | cut -c1-8)
+  cost=$(jq '.totalCost' "$file")
+  echo "$commit: \$$cost"
+done
+```
+
+**Track monthly spending:**
+```bash
+# Get all costs from current month
+jq -r 'select(.timestamp | startswith("2025-11")) | .totalCost' \
+  .evaluated-commits/*/results.json | \
+  awk '{sum+=$1} END {print "Total: $" sum}'
+```
+
+### Cost Optimization
+
+**Reduce Costs:**
+1. **Use cheaper model**: Haiku is 6x cheaper than Sonnet
+2. **Reduce parallelization**: Fewer simultaneous evaluations
+3. **Increase batch size**: More commits per run
+4. **Enable RAG**: Reduces tokens for large diffs
+
+**Example: Optimize for Budget**
+```bash
+codewave config set model claude-haiku-4-5-20251001
+codewave config set llm-provider google  # Or Gemini for cheaper
+codewave batch-evaluate --count 100 --parallel 2
+```
+
+**Example: Optimize for Quality**
+```bash
+codewave config set model claude-opus-4-1-20250805
+codewave batch-evaluate --count 10 --parallel 5
+```
+
+### Setting Budget Alerts
+
+**Monitor spending with alerts:**
+```bash
+#!/bin/bash
+# alert-on-cost.sh
+
+THRESHOLD=100  # Alert if total cost exceeds $100
+
+TOTAL_COST=$(jq -s '[.[].totalCost] | add' \
+  .evaluated-commits/*/results.json 2>/dev/null || echo 0)
+
+if (( $(echo "$TOTAL_COST > $THRESHOLD" | bc -l) )); then
+  echo "⚠️  Cost alert: Total spending is $TOTAL_COST"
+  # Send email, Slack, etc.
+fi
+```
+
+---
+
 ## Environment Variables
 
 Override any configuration setting using environment variables:

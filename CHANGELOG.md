@@ -2,6 +2,38 @@
 
 All notable changes to CodeWave are documented here.
 
+## [0.0.2] - 2025-11-08
+
+### Bug Fixes
+
+#### Developer Overview Not Being Saved
+- **Issue**: Developer Overview was being generated but not saved to `results.json`
+- **Root Cause**: Parameter passing issue in batch evaluate command - `developerOverview` was embedded in `metadata` instead of passed as separate parameter
+- **Fix**: Updated [cli/commands/batch-evaluate-command.ts](cli/commands/batch-evaluate-command.ts) to pass `developerOverview` directly to `saveEvaluationReports()`
+- **Impact**: Developer Overview now correctly appears in both `results.json` and HTML reports
+
+#### Report Display Improvements
+- **Developer Overview Card**: Now always visible in HTML report with helpful placeholder when generation fails
+- **Branding Update**: Changed footer text from "Commit Evaluator" to "CodeWave"
+- **Model Information**: Added LLM model display in Evaluation History tab header
+  - Shows format: "🤖 provider/model" (e.g., "🤖 openai/gpt-4o-mini")
+  - Helps track which model was used for each evaluation
+
+### Improvements
+
+- **Debugging**: Added console logging for developer overview generation process
+  - Logs: "📝 Generating developer overview from commit diff..."
+  - Logs: "✅ Developer overview generated successfully (X chars)"
+  - Helps understand what's happening during evaluation
+
+### Files Changed
+
+- `cli/commands/batch-evaluate-command.ts` - Fixed `developerOverview` parameter passing
+- `src/orchestrator/commit-evaluation-graph.ts` - Added logging for developer overview generation
+- `src/formatters/html-report-formatter-enhanced.ts` - Minor logging additions
+
+---
+
 ## [0.0.1] - 2025-11-08
 
 ### Major Improvements

@@ -138,6 +138,75 @@ codewave config set verbose true
 
 ---
 
+## Understanding Your Report
+
+### The 7 Pillars at a Glance
+
+Every commit is evaluated across 7 dimensions:
+
+| Metric | Scale | What It Means | Good Score |
+|--------|-------|--------------|------------|
+| Code Quality | 1-10 | Correctness, design, readability | 8+ |
+| Complexity | 10-1* | How simple/complex the code is | 8+* |
+| Ideal Time | Hours | Perfect-case implementation time | Fits sprint |
+| Actual Time | Hours | Real time developer spent | ≈ Ideal time |
+| Tech Debt | +/- Hours | Debt added/removed | Negative (debt removed) |
+| Functional Impact | 1-10 | Business value to users | 8+ |
+| Test Coverage | 1-10 | Test comprehensiveness | 8+ |
+
+*Lower complexity score (1-3) means complex, higher score (8-10) means simple
+
+### Quick Interpretation
+
+**Good Commit Pattern:**
+```
+✓ Code Quality: 8+
+✓ Complexity: 8+ (simple, reversed scale)
+✓ Actual ≈ Ideal time (or better)
+✓ Functional Impact: 7+
+✓ Test Coverage: 7+
+✓ Tech Debt: 0 or negative (improved)
+```
+
+**Red Flags:**
+```
+⚠️ Code Quality < 6: Needs review/refactoring
+⚠️ Complexity < 5: Refactor for clarity
+⚠️ Actual >> Ideal: Unexpected complexity
+⚠️ Test Coverage < 5: Add tests before shipping
+⚠️ Tech Debt > 3 hours: Plan follow-up PR
+```
+
+### Developer Overview
+
+The first section of your report - a quick AI-generated summary:
+- **Summary**: One-line overview (10 seconds)
+- **Details**: Brief explanation (30 seconds)
+- **Key Changes**: What actually changed (1 minute)
+
+**Why it matters**: Skip reading the full diff!
+
+### Multi-Round Conversation
+
+Agents discuss across 3 rounds:
+1. **Round 1**: Each agent's initial assessment
+2. **Round 2**: Agents raise concerns and challenge assumptions
+3. **Round 3**: Final validation and consensus
+
+**Look for**: Where agents disagree (highlights trade-offs)
+
+### Convergence Score
+
+Shows how much agents agreed (0.0 to 1.0):
+- **0.9+**: Strong consensus, reliable
+- **0.7-0.8**: Good consensus, minor disagreements
+- **0.5-0.6**: Moderate agreement, investigate
+- **<0.5**: Low consensus, needs discussion
+
+**Pattern**: Low convergence = commit is controversial
+
+---
+
 ## Environment Variables (Override Config)
 
 ```bash

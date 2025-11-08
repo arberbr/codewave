@@ -40,12 +40,14 @@ Complete guide to all CodeWave documentation.
   - Common disagreements
   - Round-by-round details
 
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** (811 lines)
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** (900+ lines)
   - System overview and diagrams
   - Technology stack
   - Core components
   - Data flow
   - Multi-agent orchestration
+  - Developer Overview generation
+  - Convergence detection algorithm
   - LLM integration
   - RAG system
   - Output generation
@@ -83,6 +85,25 @@ Complete guide to all CodeWave documentation.
   - Team workflows
   - Code examples (bash, Python, YAML)
 
+- **[HTML_REPORT_GUIDE.md](./HTML_REPORT_GUIDE.md)** (600+ lines)
+  - Understanding HTML reports
+  - 7-Pillar Summary cards
+  - Developer Overview
+  - Conversation Timeline
+  - Evaluation History
+  - Agent details interpretation
+  - Reading patterns and red flags
+  - Exporting and sharing
+  - Troubleshooting
+
+- **[ADVANCED_FEATURES.md](./ADVANCED_FEATURES.md)** (700+ lines)
+  - Developer Overview generation
+  - Convergence Detection algorithm
+  - Multi-Round Agent Discussion
+  - Understanding evaluation depth
+  - Advanced usage patterns
+  - Analyzing discussion quality
+
 ### Developers
 
 - **[API.md](./API.md)** (716 lines)
@@ -110,16 +131,18 @@ Complete guide to all CodeWave documentation.
 
 | Document | Lines | Topic | Audience |
 |----------|-------|-------|----------|
-| README.md | 714 | Overview & Getting Started | Everyone |
-| QUICK_REFERENCE.md | 473 | Fast Lookup | Users |
+| README.md | 750 | Overview & Getting Started | Everyone |
+| QUICK_REFERENCE.md | 540 | Fast Lookup | Users |
+| HTML_REPORT_GUIDE.md | 600 | Report Interpretation | Users |
+| ADVANCED_FEATURES.md | 700 | Deep Dive Features | Power Users |
 | AGENTS.md | 669 | Agent Deep-Dive | Implementers |
-| ARCHITECTURE.md | 811 | System Design | Developers |
+| ARCHITECTURE.md | 900 | System Design | Developers |
 | CLI.md | 708 | Command Reference | Users |
-| CONFIGURATION.md | 687 | Setup Guide | Users |
+| CONFIGURATION.md | 750 | Setup Guide | Users |
 | EXAMPLES.md | 688 | Practical Use Cases | Users |
 | API.md | 716 | Programmatic Access | Developers |
 | TROUBLESHOOTING.md | 824 | Support & Fixes | Everyone |
-| **TOTAL** | **6,290** | | |
+| **TOTAL** | **8,245** | | |
 
 ## Quick Navigation
 
@@ -154,6 +177,15 @@ Complete guide to all CodeWave documentation.
 
 **See practical examples**
 → [EXAMPLES.md](./EXAMPLES.md) - Real-world use cases
+
+**Understand my HTML report**
+→ [HTML_REPORT_GUIDE.md](./HTML_REPORT_GUIDE.md) - Complete report guide
+
+**Learn advanced features**
+→ [ADVANCED_FEATURES.md](./ADVANCED_FEATURES.md) - Deep dive into Developer Overview, Convergence, Multi-Round Discussion
+
+**Track model usage and costs**
+→ [CONFIGURATION.md](./CONFIGURATION.md) - Model Display and Cost Tracking sections
 
 ## Command Cheat Sheet
 
