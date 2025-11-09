@@ -142,23 +142,23 @@ start .evaluated-commits\*\report.html                 # Windows
 ### 3. Evaluate Multiple Commits (Batch Mode)
 
 ```bash
-codewave batch-evaluate [options]
+codewave batch [options]
 ```
 
 **Examples:**
 
 ```bash
 # Evaluate last 10 commits on current branch
-codewave batch-evaluate --count 10
+codewave batch --count 10
 
 # Evaluate with progress tracking
-codewave batch-evaluate --count 20 --verbose
+codewave batch --count 20 --verbose
 
 # Evaluate commits in date range
-codewave batch-evaluate --since "2024-01-01" --until "2024-01-31"
+codewave batch --since "2024-01-01" --until "2024-01-31"
 
 # Evaluate with custom output and parallelization
-codewave batch-evaluate --count 50 --output "./reports" --parallel 3
+codewave batch --count 50 --output "./reports" --parallel 3
 ```
 
 **Verify Batch Results:**
