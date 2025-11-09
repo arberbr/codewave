@@ -1,11 +1,12 @@
 # CodeWave: AI-Powered Commit Intelligence
 
-[![npm](https://img.shields.io/npm/v/@techdebtgpt/codewave?style=flat-square)](https://www.npmjs.com/package/@techdebtgpt/codewave)
-[![license](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen?style=flat-square)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue?style=flat-square)](https://www.typescriptlang.org/)
-[![GitHub issues](https://img.shields.io/github/issues/techdebtgpt/codewave?style=flat-square)](https://github.com/techdebtgpt/codewave/issues)
-[![GitHub stars](https://img.shields.io/github/stars/techdebtgpt/codewave?style=flat-square)](https://github.com/techdebtgpt/codewave)
+[![npm](https://img.shields.io/npm/v/@techdebtgpt/codewave.svg?style=flat-square)](https://www.npmjs.com/package/@techdebtgpt/codewave)
+[![license](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg?style=flat-square)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue.svg?style=flat-square)](https://www.typescriptlang.org/)
+[![GitHub issues](https://img.shields.io/github/issues/techdebtgpt/codewave.svg?style=flat-square)](https://github.com/techdebtgpt/codewave/issues)
+[![GitHub stars](https://img.shields.io/github/stars/techdebtgpt/codewave.svg?style=flat-square)](https://github.com/techdebtgpt/codewave)
+[![GitHub watchers](https://img.shields.io/github/watchers/techdebtgpt/codewave.svg?style=flat-square)](https://github.com/techdebtgpt/codewave)
 
 **Multi-agent conversational system for comprehensive code quality evaluation using a 7-pillar methodology.**
 
@@ -325,7 +326,7 @@ CodeWave evaluates commits across 7 carefully chosen dimensions, with each pilla
 
 **Agent**: Business Analyst
 **Description**: Estimates ideal development time under optimal conditions (clear requirements, no interruptions).
-**Scale**: Hours (0.5 to 80).
+**Scale**: Hours (0.5 to 80)
 **Weights**: Baseline for productivity metrics.
 
 ### Pillar 4: Actual Time Hours (Estimate)
@@ -807,6 +808,16 @@ console.log('Consensus:', result.consensus);
 ## License
 
 MIT License - see [LICENSE](./LICENSE) file for details.
+
+---
+
+## Contributing
+
+We welcome contributions from the community! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to contribute to CodeWave.
+
+### Code of Conduct
+
+This project adheres to the [Contributor Covenant Code of Conduct](./CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
 
 ---
 
