@@ -25,7 +25,7 @@
     "postpack": "echo '✅ Package created successfully'"
   },
   "bin": {
-    "codewave": "cli/index.js"
+    "codewave": "./dist/cli/index.js"
   },
   "type": "commonjs",
   "devDependencies": {
