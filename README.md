@@ -174,6 +174,7 @@ jq -s '[.[].totalCost] | add' .evaluated-commits/*/results.json
 ### Common First-Time Issues
 
 **Issue**: "API Key not found"
+
 ```bash
 # Solution: Run setup again or set environment variable
 codewave config
@@ -183,6 +184,7 @@ codewave evaluate HEAD
 ```
 
 **Issue**: "codewave: command not found" (on Windows)
+
 ```bash
 # Solution: Ensure npm was restarted after installation
 npm install -g @techdebtgpt/codewave
@@ -191,6 +193,7 @@ codewave --version
 ```
 
 **Issue**: Evaluation times out
+
 ```bash
 # Solution: Enable RAG for large commits
 codewave config set enable-rag true
@@ -337,6 +340,7 @@ Or in config file:
 ```
 
 **Available formats**:
+
 - `html` - Interactive HTML report (default)
 - `json` - Structured JSON for programmatic access
 - `markdown` - Markdown format
@@ -527,6 +531,7 @@ Applied only to a specific project, overrides user-level settings:
 ```
 
 **When to use project config**:
+
 - Different API keys per project
 - Team-specific settings
 - CI/CD pipeline customization
