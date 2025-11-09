@@ -41,7 +41,16 @@ function generateHeaderAndFormat(): { header: string; format: string } {
   // Create sample data row to determine column widths (with extra space for readability)
   const sampleData = [
     headers,
-    ['6b66968', 'john-doe-long', '100%', '███░░░░░░░░░░░░░░', 'running', '1250000/284000', '$1.2345', '3/3'],
+    [
+      '6b66968',
+      'john-doe-long',
+      '100%',
+      '███░░░░░░░░░░░░░░',
+      'running',
+      '1250000/284000',
+      '$1.2345',
+      '3/3',
+    ],
   ];
 
   // Generate table to get proper widths
@@ -70,7 +79,7 @@ function generateHeaderAndFormat(): { header: string; format: string } {
 
   // Parse column widths from the data line
   const dataColumns = dataLine.split(/  +/);
-  const widths = dataColumns.map(col => col.length);
+  const widths = dataColumns.map((col) => col.length);
 
   // Generate colored header
   const coloredHeaders = [
@@ -106,7 +115,16 @@ function generateHeaderAndFormat(): { header: string; format: string } {
 
   // Build format string with placeholders for dynamic values
   // Use the same sample data values to calculate expected lengths
-  const sampleValues = ['6b66968', 'john-doe-long', '100%', '███░░░░░░░░░░░░░░', 'running', '1250000/284000', '$1.2345', '3/3'];
+  const sampleValues = [
+    '6b66968',
+    'john-doe-long',
+    '100%',
+    '███░░░░░░░░░░░░░░',
+    'running',
+    '1250000/284000',
+    '$1.2345',
+    '3/3',
+  ];
 
   const format = coloredFormats
     .map((fmt, i) => {
@@ -291,15 +309,15 @@ export class ProgressTracker {
     const prevCost = commitTokens.cost;
 
     if (update.inputTokens !== undefined && update.inputTokens !== prevInput) {
-      this.totalInputTokens += (update.inputTokens - prevInput);
+      this.totalInputTokens += update.inputTokens - prevInput;
       commitTokens.input = update.inputTokens;
     }
     if (update.outputTokens !== undefined && update.outputTokens !== prevOutput) {
-      this.totalOutputTokens += (update.outputTokens - prevOutput);
+      this.totalOutputTokens += update.outputTokens - prevOutput;
       commitTokens.output = update.outputTokens;
     }
     if (update.totalCost !== undefined && update.totalCost !== prevCost) {
-      this.totalCost += (update.totalCost - prevCost);
+      this.totalCost += update.totalCost - prevCost;
       commitTokens.cost = update.totalCost;
     }
 
@@ -307,7 +325,8 @@ export class ProgressTracker {
 
     // Format vector progress
     const vectorPct = this.commitVectorProgress.get(commitHash) || 0;
-    const vectorColor = vectorPct === 100 ? colors.green : vectorPct > 0 ? colors.yellow : colors.dim;
+    const vectorColor =
+      vectorPct === 100 ? colors.green : vectorPct > 0 ? colors.yellow : colors.dim;
     const vectorStr = `${vectorColor}${vectorPct}%${colors.reset}`;
 
     // Format token info with colors
@@ -320,7 +339,9 @@ export class ProgressTracker {
 
     // Format round info (display is 1-indexed, storage is 0-indexed)
     const roundInfo = this.commitRound.get(commitHash);
-    const roundStr = roundInfo ? `${colors.cyan}${Math.min(roundInfo.current + 1, roundInfo.max)}/${roundInfo.max}${colors.reset}` : `${colors.dim}0/0${colors.reset}`;
+    const roundStr = roundInfo
+      ? `${colors.cyan}${Math.min(roundInfo.current + 1, roundInfo.max)}/${roundInfo.max}${colors.reset}`
+      : `${colors.dim}0/0${colors.reset}`;
 
     // Get current state
     const currentState = this.commitState.get(commitHash) || `${colors.dim}pending${colors.reset}`;
