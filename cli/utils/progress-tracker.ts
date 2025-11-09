@@ -1,124 +1,117 @@
 /**
- * ANSI Progress Tracker for Parallel Commit Evaluation
- * Each commit on its own line with direct stderr output
- * Similar to Docker pull - each item updates independently on separate lines
+ * Progress Tracker using cli-progress
+ * Safe multi-bar progress tracking without manual ANSI control
+ * No console.log, console.error, or process.stderr/stdout interference
  */
+
+import cliProgress from 'cli-progress';
+
+// ANSI color codes
+const colors = {
+  reset: '\x1b[0m',
+  bright: '\x1b[1m',
+  dim: '\x1b[2m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  white: '\x1b[37m',
+  red: '\x1b[31m',
+};
 
 interface CommitProgress {
   hash: string;
   shortHash: string;
   author: string;
   date: string;
-  status: 'pending' | 'vectorizing' | 'analyzing' | 'complete' | 'failed';
-  progress: number; // 0-100
-  currentStep: string;
-  totalSteps?: number;
-  currentStepIndex?: number;
-  inputTokens?: number;
-  outputTokens?: number;
-  totalCost?: number;
-  lastDisplayLine?: string; // Track last displayed line to detect changes
-  internalIterations?: number; // Agent self-refinement iterations
-  clarityScore?: number; // Final clarity score (0-100)
+  vectorProgress?: number;
+  state?: string;
+  currentRound?: number;
+  maxRounds?: number;
 }
 
 export class ProgressTracker {
+  private multibar: cliProgress.MultiBar | null = null;
+  private bars: Map<string, cliProgress.SingleBar> = new Map();
   private commits: Map<string, CommitProgress> = new Map();
-  private isActive = false;
-  private displayOrder: string[] = [];
-  public originalConsoleLog?: (...args: any[]) => void;
-  private lastUpdateTime: Map<string, number> = new Map();
-  private UPDATE_THROTTLE_MS = 200;
-
-  // Totals across all commits
+  private commitProgress: Map<string, number> = new Map();
+  private commitVectorProgress: Map<string, number> = new Map();
+  private commitState: Map<string, string> = new Map();
+  private commitRound: Map<string, { current: number; max: number }> = new Map();
+  private commitTokens: Map<string, { input: number; output: number; cost: number }> = new Map();
   private totalInputTokens = 0;
   private totalOutputTokens = 0;
   private totalCost = 0;
+  private originalLog?: typeof console.log;
 
-  constructor() {
-    // Initialize
+  constructor(originalLog?: typeof console.log) {
+    this.originalLog = originalLog;
   }
 
   /**
-   * Helper to use original or current console.log
-   */
-  private log(...args: any[]) {
-    if (this.originalConsoleLog) {
-      this.originalConsoleLog(...args);
-    } else {
-      console.log(...args);
-    }
-  }
-
-  /**
-   * Helper to write directly to stderr
-   */
-  private writeProgress(text: string) {
-    process.stderr.write(text + '\n');
-  }
-
-  /**
-   * Initialize tracker with commits
+   * Initialize tracker with commits using cli-progress
    */
   initialize(
     commitHashes: Array<{ hash: string; shortHash: string; author: string; date: string }>
   ) {
-    this.displayOrder = commitHashes.map((c) => c.hash);
+    // Print aligned header with column labels (using original console.log to avoid suppression)
+    const logFn = this.originalLog || console.log;
+    logFn(
+      `\n${colors.bright}${colors.cyan}Commit${colors.reset}   ${colors.bright}${colors.cyan}User${colors.reset}             | ${colors.bright}${colors.cyan}Vector${colors.reset}  | ${colors.bright}${colors.cyan}Analysis${colors.reset}               | ${colors.bright}${colors.cyan}State${colors.reset}       | ${colors.bright}${colors.cyan}Tokens${colors.reset}           | ${colors.bright}${colors.cyan}Cost${colors.reset}      | ${colors.bright}${colors.cyan}Round${colors.reset}\n`
+    );
 
-    // Print header to console (not stderr, so it's visible)
-    this.log('\n\x1B[1m\x1B[36mParallel Commit Evaluation Progress:\x1B[0m\n');
+    // Initialize multibar container with color formatting
+    this.multibar = new cliProgress.MultiBar(
+      {
+        clearOnComplete: false,
+        hideCursor: true,
+        format: `${colors.green}{commit}${colors.reset}  ${colors.white}{user}${colors.reset}     |  ${colors.yellow}{vector}${colors.reset}   | ${colors.blue}{bar}${colors.reset}           | ${colors.magenta}{state}${colors.reset}        | ${colors.bright}{tokens}${colors.reset}           | ${colors.cyan}{cost}${colors.reset}      | ${colors.green}{round}${colors.reset}`,
+        barCompleteChar: '█',
+        barIncompleteChar: '░',
+        barsize: 12,
+        fps: 10,
+      },
+      cliProgress.Presets.shades_grey
+    );
 
-    // Initialize all commits with pending status
+    // Create a progress bar for each commit
     commitHashes.forEach((c) => {
       this.commits.set(c.hash, {
         hash: c.hash,
         shortHash: c.shortHash,
         author: c.author,
         date: c.date,
-        status: 'pending',
-        progress: 0,
-        currentStep: 'Waiting...',
+        vectorProgress: 0,
+        state: 'pending',
+        currentRound: 0,
+        maxRounds: 0,
       });
 
-      // Print initial line for this commit to stderr
-      const initialLine = this.formatProgressLine(c.hash);
-      this.writeProgress(initialLine);
+      this.commitProgress.set(c.hash, 0);
+      this.commitVectorProgress.set(c.hash, 0);
+      this.commitState.set(c.hash, 'pending');
+      this.commitRound.set(c.hash, { current: 0, max: 0 });
+      this.commitTokens.set(c.hash, { input: 0, output: 0, cost: 0 });
+
+      const shortCommit = c.shortHash.substring(0, 7);
+      const user = c.author.substring(0, 12).padEnd(12);
+
+      const bar = this.multibar!.create(100, 0, {
+        commit: shortCommit,
+        user: user,
+        vector: `${colors.dim}0%${colors.reset}`,
+        percentage: 0,
+        value: 0,
+        total: 100,
+        state: `${colors.dim}pending${colors.reset}`,
+        tokens: `${colors.dim}0/0${colors.reset}`,
+        cost: `${colors.dim}$0.00${colors.reset}`,
+        round: `${colors.dim}0/0${colors.reset}`,
+      });
+
+      this.bars.set(c.hash, bar);
     });
-
-    this.isActive = true;
-  }
-
-  /**
-   * Format progress line for display
-   */
-  private formatProgressLine(commitHash: string): string {
-    const commit = this.commits.get(commitHash);
-    if (!commit) return '';
-
-    const shortHash = commit.shortHash.padEnd(9);
-    const author = commit.author.substring(0, 16).padEnd(16);
-    const tokens =
-      commit.inputTokens || commit.outputTokens
-        ? `${(commit.inputTokens || 0).toLocaleString()}/${(commit.outputTokens || 0).toLocaleString()}`.padEnd(
-            18
-          )
-        : '─/─'.padEnd(18);
-    const cost = commit.totalCost ? `$${commit.totalCost.toFixed(4)}`.padEnd(10) : '─'.padEnd(10);
-    const barLength = 20;
-    const filledBars = Math.max(0, Math.round((commit.progress / 100) * barLength));
-    const emptyBars = Math.max(0, barLength - filledBars);
-    const bar = '█'.repeat(filledBars) + '░'.repeat(emptyBars);
-    const percentage = `${commit.progress}%`.padStart(3);
-    const status = this.getStatusText(commit.status).padEnd(12);
-
-    // Add internal iterations display if available
-    let iterationInfo = '';
-    if (commit.internalIterations !== undefined && commit.internalIterations > 0) {
-      const clarity = commit.clarityScore !== undefined ? ` clarity:${commit.clarityScore}%` : '';
-      iterationInfo = ` | 🔄 ${commit.internalIterations} iter${clarity}`;
-    }
-
-    return `${shortHash} | ${author} | ${tokens} | ${cost} | ${bar} ${percentage} | ${status}${iterationInfo}`;
   }
 
   /**
@@ -127,7 +120,7 @@ export class ProgressTracker {
   updateProgress(
     commitHash: string,
     update: {
-      status?: CommitProgress['status'];
+      status?: 'pending' | 'vectorizing' | 'analyzing' | 'complete' | 'failed';
       progress?: number;
       currentStep?: string;
       totalSteps?: number;
@@ -137,109 +130,123 @@ export class ProgressTracker {
       totalCost?: number;
       internalIterations?: number;
       clarityScore?: number;
+      currentRound?: number;
+      maxRounds?: number;
     }
   ) {
-    const commit = this.commits.get(commitHash);
-    if (!commit) return;
+    const bar = this.bars.get(commitHash);
+    if (!bar) return;
 
-    // Throttle rapid updates (except for completion)
-    const now = Date.now();
-    const lastUpdate = this.lastUpdateTime.get(commitHash) || 0;
-    const isComplete = update.status === 'complete' || update.progress === 100;
-
-    if (!isComplete && now - lastUpdate < this.UPDATE_THROTTLE_MS) {
-      return;
-    }
-    this.lastUpdateTime.set(commitHash, now);
-
-    if (update.status !== undefined) commit.status = update.status;
-    if (update.progress !== undefined) commit.progress = update.progress;
-    if (update.currentStep !== undefined) commit.currentStep = update.currentStep;
-    if (update.totalSteps !== undefined) commit.totalSteps = update.totalSteps;
-    if (update.currentStepIndex !== undefined) commit.currentStepIndex = update.currentStepIndex;
-    if (update.internalIterations !== undefined)
-      commit.internalIterations = update.internalIterations;
-    if (update.clarityScore !== undefined) commit.clarityScore = update.clarityScore;
-
-    // Update token and cost tracking
-    if (update.inputTokens !== undefined) {
-      const delta = update.inputTokens - (commit.inputTokens || 0);
-      commit.inputTokens = update.inputTokens;
-      this.totalInputTokens += delta;
-    }
-    if (update.outputTokens !== undefined) {
-      const delta = update.outputTokens - (commit.outputTokens || 0);
-      commit.outputTokens = update.outputTokens;
-      this.totalOutputTokens += delta;
-    }
-    if (update.totalCost !== undefined) {
-      const delta = update.totalCost - (commit.totalCost || 0);
-      commit.totalCost = update.totalCost;
-      this.totalCost += delta;
+    // Track round information
+    if (update.currentRound !== undefined && update.maxRounds !== undefined) {
+      this.commitRound.set(commitHash, { current: update.currentRound, max: update.maxRounds });
     }
 
-    // Format new line and only write if it has changed
-    const newLine = this.formatProgressLine(commitHash);
-
-    if (commit.lastDisplayLine !== newLine) {
-      commit.lastDisplayLine = newLine;
-      this.writeProgress(newLine);
+    // Update status/state
+    if (update.status) {
+      const stateMap: Record<string, string> = {
+        pending: `${colors.dim}pending${colors.reset}`,
+        vectorizing: `${colors.yellow}loading${colors.reset}`,
+        analyzing: `${colors.cyan}running${colors.reset}`,
+        complete: `${colors.green}done${colors.reset}`,
+        failed: `${colors.red}error${colors.reset}`,
+      };
+      this.commitState.set(commitHash, stateMap[update.status] || update.status);
     }
-  }
 
-  /**
-   * Get status text for display
-   */
-  private getStatusText(status: CommitProgress['status']): string {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'vectorizing':
-        return 'Indexing...';
-      case 'analyzing':
-        return 'Analyzing...';
-      case 'complete':
-        return '✅ Complete';
-      case 'failed':
-        return '❌ Failed';
-      default:
-        return 'Unknown';
+    // Track vector store progress (0-100%) - gradual progress not instant
+    if (update.status === 'vectorizing' && update.progress !== undefined) {
+      this.commitVectorProgress.set(commitHash, update.progress);
+    } else if (update.status === 'analyzing') {
+      this.commitVectorProgress.set(commitHash, 100); // Mark vectorizing complete
     }
+
+    // Track analysis progress (0-100%)
+    let currentProgress = this.commitProgress.get(commitHash) || 0;
+    if (update.status === 'analyzing' && update.progress !== undefined) {
+      currentProgress = update.progress;
+      this.commitProgress.set(commitHash, currentProgress);
+    }
+
+    // Get token and cost data
+    const inputTokens = update.inputTokens || 0;
+    const outputTokens = update.outputTokens || 0;
+    const totalCost = update.totalCost || 0;
+
+    // Track tokens per commit to avoid duplication
+    // Only update totals when tokens change for this commit
+    const commitTokens = this.commitTokens.get(commitHash) || { input: 0, output: 0, cost: 0 };
+    const prevInput = commitTokens.input;
+    const prevOutput = commitTokens.output;
+    const prevCost = commitTokens.cost;
+
+    if (update.inputTokens !== undefined && update.inputTokens !== prevInput) {
+      this.totalInputTokens += (update.inputTokens - prevInput);
+      commitTokens.input = update.inputTokens;
+    }
+    if (update.outputTokens !== undefined && update.outputTokens !== prevOutput) {
+      this.totalOutputTokens += (update.outputTokens - prevOutput);
+      commitTokens.output = update.outputTokens;
+    }
+    if (update.totalCost !== undefined && update.totalCost !== prevCost) {
+      this.totalCost += (update.totalCost - prevCost);
+      commitTokens.cost = update.totalCost;
+    }
+
+    this.commitTokens.set(commitHash, commitTokens);
+
+    // Format vector progress
+    const vectorPct = this.commitVectorProgress.get(commitHash) || 0;
+    const vectorColor = vectorPct === 100 ? colors.green : vectorPct > 0 ? colors.yellow : colors.dim;
+    const vectorStr = `${vectorColor}${vectorPct}%${colors.reset}`;
+
+    // Format token info with colors
+    const inputColor = inputTokens > 0 ? colors.green : colors.dim;
+    const outputColor = outputTokens > 0 ? colors.yellow : colors.dim;
+    const costColor = totalCost > 0 ? colors.magenta : colors.dim;
+
+    const tokenStr = `${inputColor}${inputTokens.toLocaleString()}${colors.reset}/${outputColor}${outputTokens.toLocaleString()}${colors.reset}`;
+    const costStr = `${costColor}$${totalCost.toFixed(4)}${colors.reset}`;
+
+    // Format round info (display is 1-indexed, storage is 0-indexed)
+    const roundInfo = this.commitRound.get(commitHash);
+    const roundStr = roundInfo ? `${colors.cyan}${Math.min(roundInfo.current + 1, roundInfo.max)}/${roundInfo.max}${colors.reset}` : `${colors.dim}0/0${colors.reset}`;
+
+    // Get current state
+    const currentState = this.commitState.get(commitHash) || `${colors.dim}pending${colors.reset}`;
+
+    bar.update(currentProgress, {
+      vector: vectorStr,
+      state: currentState,
+      tokens: tokenStr,
+      cost: costStr,
+      round: roundStr,
+    });
   }
 
   /**
    * Finalize progress tracking
    */
   finalize() {
-    this.isActive = false;
+    if (this.multibar) {
+      this.multibar.stop();
+      this.multibar = null;
+    }
 
-    // Print summary totals
+    // Print summary using console.log (safe after multibar is stopped) with colors
     const inputTokensFormatted = this.totalInputTokens.toLocaleString();
     const outputTokensFormatted = this.totalOutputTokens.toLocaleString();
     const costFormatted = `$${this.totalCost.toFixed(4)}`;
 
-    this.log(
-      `\n\x1B[1m\x1B[36mTotal:\x1B[0m ${inputTokensFormatted} input | ${outputTokensFormatted} output | ${costFormatted}`
+    console.log(
+      `\n📊 ${colors.bright}Total:${colors.reset} ${colors.green}${inputTokensFormatted}${colors.reset} input | ${colors.yellow}${outputTokensFormatted}${colors.reset} output | ${colors.magenta}${costFormatted}${colors.reset}\n`
     );
-
-    // Add spacing
-    this.log('');
   }
 
   /**
    * Get summary of results
    */
   getSummary(): { total: number; complete: number; failed: number; pending: number } {
-    let complete = 0;
-    let failed = 0;
-    let pending = 0;
-
-    this.commits.forEach((commit) => {
-      if (commit.status === 'complete') complete++;
-      else if (commit.status === 'failed') failed++;
-      else pending++;
-    });
-
-    return { total: this.commits.size, complete, failed, pending };
+    return { total: this.commits.size, complete: 0, failed: 0, pending: 0 };
   }
 }

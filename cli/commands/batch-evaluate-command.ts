@@ -113,12 +113,18 @@ export async function runBatchEvaluateCommand(args: string[]) {
   // Configure concurrency limit (10 concurrent evaluations)
   const limit = pLimit(10);
 
-  // Save original console.log before suppressing
+  // Save all original console and process methods before suppressing
   const originalConsoleLog = console.log;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleError = console.error;
+  const originalStdoutWrite = process.stdout.write.bind(process.stdout);
 
-  // Initialize ANSI progress tracker with original console.log
-  const progressTracker = new ProgressTracker();
-  (progressTracker as any).originalConsoleLog = originalConsoleLog; // Pass original logger
+  // Buffer for storing suppressed output (warnings, errors)
+  const suppressedOutput: Array<{ type: string; args: any[] }> = [];
+  let suppressOutput = false;
+
+  // Initialize progress tracker with original console.log for header printing
+  const progressTracker = new ProgressTracker(originalConsoleLog);
   progressTracker.initialize(
     commits.map((c) => ({
       hash: c.hash,
@@ -128,23 +134,83 @@ export async function runBatchEvaluateCommand(args: string[]) {
     }))
   );
 
-  // Suppress console output during parallel execution to keep progress display clean
-  const originalStdoutWrite = process.stdout.write.bind(process.stdout);
-  let suppressOutput = false;
+  // Helper to check if a message is a diagnostic log (should be filtered)
+  const isDiagnosticLog = (args: any[]): boolean => {
+    const message = String(args[0] || '');
+    // Filter out vector store diagnostic logs
+    if (message.includes('Found file via diff')) return true;
+    if (message.includes('Line ') && message.includes(':')) return true;
+    if (message.includes('Confirmed file via')) return true;
+    if (message.includes('Building in-memory vector store')) return true;
+    if (message.includes('Vector store ready')) return true;
+    if (message.includes('Parsing ') && message.includes('lines')) return true;
+    if (message.includes('Detecting agent')) return true;
+    if (message.includes('Developer overview generated')) return true;
+    if (message.includes('State update from')) return true;
+    if (message.includes('Streaming enabled')) return true;
+    if (message.includes('Indexing:')) return true;
+    if (message.includes('Cleaning up vector store')) return true;
+    if (message.includes('Detected') && message.includes('unique agents')) return true;
+    if (message.includes('responses (rounds:')) return true;
+    // Filter out orchestrator status messages
+    if (message.includes('🚀 Starting commit evaluation')) return true;
+    if (message.includes('Large diff detected')) return true;
+    if (message.includes('First 3 lines:')) return true;
+    if (message.includes('files | +') && message.includes('-')) return true;
+    if (message.includes('📝 Generating developer overview')) return true;
+    if (message.includes('Round ') && message.includes('Analysis')) return true;
+    if (message.includes('Evaluation complete in')) return true;
+    if (message.includes('Total agents:')) return true;
+    if (message.includes('Discussion rounds:')) return true;
+    if (message.includes('💰')) return true;
+    if (message.includes('Indexed') && message.includes('chunks')) return true;
+    // Filter out round information logs (e.g., "[3/4] 🔄 6b66968 - Round 2/3")
+    if (/\[\d+\/\d+\]\s*🔄/.test(message)) return true;
+    if (message.includes('Round ') && message.includes('Raising Concerns')) return true;
+    if (message.includes('Round ') && message.includes('Validation & Final')) return true;
+    return false;
+  };
 
-  // Override console.log to suppress orchestrator output (but not progress tracker)
+  // Override console methods to suppress output during evaluation
+  // NOTE: We do NOT suppress process.stderr because cli-progress writes to stderr!
   console.log = (...args: any[]) => {
     if (!suppressOutput) {
       originalConsoleLog(...args);
+    } else if (!isDiagnosticLog(args)) {
+      // Only buffer non-diagnostic logs (actual errors or important messages)
+      suppressedOutput.push({ type: 'log', args });
     }
   };
 
-  // Override process.stdout.write to suppress orchestrator progress messages
+  console.warn = (...args: any[]) => {
+    if (!suppressOutput) {
+      originalConsoleWarn(...args);
+    } else if (!isDiagnosticLog(args)) {
+      suppressedOutput.push({ type: 'warn', args });
+    }
+  };
+
+  console.error = (...args: any[]) => {
+    if (!suppressOutput) {
+      originalConsoleError(...args);
+    } else if (!isDiagnosticLog(args)) {
+      suppressedOutput.push({ type: 'error', args });
+    }
+  };
+
+  // Override process.stdout.write to suppress orchestrator progress lines
   (process.stdout.write as any) = function (str: string, ...args: any[]): boolean {
     if (suppressOutput) {
       // Block orchestrator progress lines like "  [1/2] ✅ 33% [5/15] business-analyst"
-      // These start with whitespace and contain the [X/Y] pattern
       if (/^\s+\[[\d]+\/[\d]+\]/.test(str)) {
+        return true; // Suppress
+      }
+      // Block explicit newlines from progress tracking
+      if (str === '\n' || str === '\r\n') {
+        return true; // Suppress
+      }
+      // Block carriage return progress updates
+      if (str.startsWith('\r')) {
         return true; // Suppress
       }
     }
@@ -230,7 +296,7 @@ export async function runBatchEvaluateCommand(args: string[]) {
                 if (currentRound !== lastRoundReported) {
                   lastRoundReported = currentRound;
 
-                  // Calculate progress based on rounds completed
+                  // Calculate progress based on rounds completed (1-indexed for display, 0-indexed from state)
                   const progress = Math.floor(((currentRound + 1) / maxRounds) * 100);
 
                   progressTracker.updateProgress(commit.hash, {
@@ -239,6 +305,8 @@ export async function runBatchEvaluateCommand(args: string[]) {
                     inputTokens: commitTokensInput,
                     outputTokens: commitTokensOutput,
                     totalCost: commitCost,
+                    currentRound: currentRound,
+                    maxRounds: maxRounds,
                   });
                 }
               }
@@ -339,13 +407,30 @@ export async function runBatchEvaluateCommand(args: string[]) {
   // Execute all tasks with concurrency limit
   const evaluationResults = await Promise.all(evaluationTasks);
 
-  // Restore console.log and process.stdout.write
+  // Restore console methods and process stdout
   suppressOutput = false;
   console.log = originalConsoleLog;
+  console.warn = originalConsoleWarn;
+  console.error = originalConsoleError;
   process.stdout.write = originalStdoutWrite as any;
 
   // Finalize progress tracker
   progressTracker.finalize();
+
+  // Display any buffered warnings/errors after progress is complete
+  if (suppressedOutput.length > 0) {
+    console.log('\n📋 Notices from evaluation phase:');
+    suppressedOutput.forEach((output) => {
+      if (output.type === 'warn') {
+        originalConsoleWarn('  ⚠️ ', ...output.args);
+      } else if (output.type === 'error') {
+        originalConsoleError('  ❌ ', ...output.args);
+      } else if (output.type === 'log') {
+        originalConsoleLog('  ℹ️ ', ...output.args);
+      }
+    });
+    console.log();
+  }
 
   // Filter out null results (failed or skipped commits)
   results.push(...evaluationResults.filter((r): r is CommitEvaluationResult => r !== null));
