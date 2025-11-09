@@ -339,7 +339,7 @@ CodeWave evaluates commits across 7 carefully chosen dimensions, with each pilla
 
 **Agent**: Senior Architect
 **Description**: Positive = Additional debt introduced; Negative = Debt reduced/eliminated.
-**Scale**: Hours (+/- 0 to 40)
+**Scale**: Hours (+/- 0 to 40).
 **Weights**: Critical for assessing long-term codebase health.
 
 ### Pillar 6: Functional Impact (1-10)
