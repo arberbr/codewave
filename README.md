@@ -77,7 +77,7 @@ npm run build
 ### 2. Configure Your LLM Provider
 
 ```bash
-codewave config
+codewave config --init
 ```
 
 This launches an interactive wizard to configure:
@@ -92,7 +92,7 @@ Configuration is stored securely and only needs to be done once.
 **Verify Setup:**
 
 ```bash
-codewave config show
+codewave config --list
 ```
 
 ### 3. Evaluate Your First Commit
@@ -239,9 +239,9 @@ jq -s '[.[].totalCost] | add' .evaluated-commits/*/results.json
 ### config - Manage Configuration
 
 ```bash
-codewave config                    # Interactive setup wizard
-codewave config show               # Display current configuration
-codewave config reset              # Reset to defaults
+codewave config --init             # Interactive setup wizard
+codewave config --list             # Display current configuration
+codewave config --reset            # Reset to defaults
 ```
 
 ---
@@ -252,7 +252,7 @@ codewave config reset              # Reset to defaults
 
 ```bash
 # Solution: Run setup again or set environment variable
-codewave config
+codewave config --init
 # OR
 export CODEWAVE_API_KEY=sk-ant-...
 codewave evaluate --commit HEAD
@@ -270,7 +270,7 @@ codewave --version
 
 ```bash
 # Solution: Enable RAG for large commits
-codewave config
+codewave config --init
 # Then when prompted, enable RAG for large diffs
 codewave evaluate --commit HEAD
 ```
@@ -435,10 +435,10 @@ CodeWave uses a 3-tier configuration system with priority order:
 
 ### Quick Setup
 
-On first run, use `codewave config` to set up your LLM provider:
+On first run, use `codewave config --init` to set up your LLM provider:
 
 ```bash
-codewave config
+codewave config --init
 ```
 
 This creates a user-level configuration file.
@@ -1111,7 +1111,7 @@ We welcome contributions! Please follow these guidelines:
 **Q: "API Key not found" error**
 
 ```
-A: Run 'codewave config' to set up your LLM provider credentials.
+A: Run 'codewave config --init' to set up your LLM provider credentials.
    Alternatively, set CODEWAVE_API_KEY environment variable.
 ```
 
