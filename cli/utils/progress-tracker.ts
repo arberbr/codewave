@@ -5,6 +5,7 @@
  */
 
 import cliProgress from 'cli-progress';
+import { table } from 'table';
 
 // ANSI color codes
 const colors = {
@@ -19,6 +20,105 @@ const colors = {
   white: '\x1b[37m',
   red: '\x1b[31m',
 };
+
+/**
+ * Calculate visible length of a string (excluding ANSI codes)
+ */
+function getVisibleLength(str: string): number {
+  // Remove ANSI escape sequences: ESC [ ... m
+  const ansiRegex = new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g');
+  return str.replace(ansiRegex, '').length;
+}
+
+/**
+ * Generate aligned header using table library
+ * Returns both the header line and format string with proper spacing
+ */
+function generateHeaderAndFormat(): { header: string; format: string } {
+  // Define column headers
+  const headers = ['Commit', 'User', 'Vector', 'Analysis', 'State', 'Tokens', 'Cost', 'Round'];
+
+  // Create sample data row to determine column widths (with extra space for readability)
+  const sampleData = [
+    headers,
+    ['6b66968', 'john-doe-long', '100%', '███░░░░░░░░░░░░░░', 'running', '1250000/284000', '$1.2345', '3/3'],
+  ];
+
+  // Generate table to get proper widths
+  const tableOutput = table(sampleData, {
+    border: {
+      topBody: '',
+      topJoin: '',
+      topLeft: '',
+      topRight: '',
+      bottomBody: '',
+      bottomRight: '',
+      bodyLeft: '',
+      bodyRight: '',
+      bodyJoin: '',
+      joinBody: '',
+      joinLeft: '',
+      joinRight: '',
+      joinJoin: '',
+    },
+    drawHorizontalLine: () => false,
+  });
+
+  // Extract widths from the table output
+  const lines = tableOutput.split('\n');
+  const dataLine = lines[1];
+
+  // Parse column widths from the data line
+  const dataColumns = dataLine.split(/  +/);
+  const widths = dataColumns.map(col => col.length);
+
+  // Generate colored header
+  const coloredHeaders = [
+    `${colors.bright}${colors.cyan}${headers[0]}${colors.reset}`,
+    `${colors.bright}${colors.cyan}${headers[1]}${colors.reset}`,
+    `${colors.bright}${colors.cyan}${headers[2]}${colors.reset}`,
+    `${colors.bright}${colors.cyan}${headers[3]}${colors.reset}`,
+    `${colors.bright}${colors.cyan}${headers[4]}${colors.reset}`,
+    `${colors.bright}${colors.cyan}${headers[5]}${colors.reset}`,
+    `${colors.bright}${colors.cyan}${headers[6]}${colors.reset}`,
+    `${colors.bright}${colors.cyan}${headers[7]}${colors.reset}`,
+  ];
+
+  // Pad columns to match widths, accounting for ANSI code lengths
+  const paddedHeaders = coloredHeaders.map((h, i) => {
+    const visibleLen = getVisibleLength(h);
+    const padLength = widths[i] - visibleLen;
+    return h + ' '.repeat(Math.max(0, padLength));
+  });
+  const header = `\n${paddedHeaders.join('  ')}\n`;
+
+  // Generate format string for cli-progress with proper spacing
+  const coloredFormats = [
+    `${colors.green}{commit}${colors.reset}`,
+    `${colors.white}{user}${colors.reset}`,
+    `${colors.yellow}{vector}${colors.reset}`,
+    `${colors.blue}{bar}${colors.reset}`,
+    `${colors.magenta}{state}${colors.reset}`,
+    `${colors.bright}{tokens}${colors.reset}`,
+    `${colors.cyan}{cost}${colors.reset}`,
+    `${colors.green}{round}${colors.reset}`,
+  ];
+
+  // Build format string with placeholders for dynamic values
+  // Use the same sample data values to calculate expected lengths
+  const sampleValues = ['6b66968', 'john-doe-long', '100%', '███░░░░░░░░░░░░░░', 'running', '1250000/284000', '$1.2345', '3/3'];
+
+  const format = coloredFormats
+    .map((fmt, i) => {
+      // Use actual sample data length as the expected visible length
+      const estimatedLen = sampleValues[i].length;
+      const padLength = widths[i] - estimatedLen;
+      return fmt + ' '.repeat(Math.max(0, padLength));
+    })
+    .join('  ');
+
+  return { header, format };
+}
 
 interface CommitProgress {
   hash: string;
@@ -43,6 +143,8 @@ export class ProgressTracker {
   private totalInputTokens = 0;
   private totalOutputTokens = 0;
   private totalCost = 0;
+  private completedCommits = 0;
+  private failedCommits = 0;
   private originalLog?: typeof console.log;
 
   constructor(originalLog?: typeof console.log) {
@@ -55,18 +157,19 @@ export class ProgressTracker {
   initialize(
     commitHashes: Array<{ hash: string; shortHash: string; author: string; date: string }>
   ) {
+    // Generate aligned header and format string with proper column widths
+    const { header, format } = generateHeaderAndFormat();
+
     // Print aligned header with column labels (using original console.log to avoid suppression)
     const logFn = this.originalLog || console.log;
-    logFn(
-      `\n${colors.bright}${colors.cyan}Commit${colors.reset}   ${colors.bright}${colors.cyan}User${colors.reset}             | ${colors.bright}${colors.cyan}Vector${colors.reset}  | ${colors.bright}${colors.cyan}Analysis${colors.reset}               | ${colors.bright}${colors.cyan}State${colors.reset}       | ${colors.bright}${colors.cyan}Tokens${colors.reset}           | ${colors.bright}${colors.cyan}Cost${colors.reset}      | ${colors.bright}${colors.cyan}Round${colors.reset}\n`
-    );
+    logFn(header);
 
     // Initialize multibar container with color formatting
     this.multibar = new cliProgress.MultiBar(
       {
         clearOnComplete: false,
         hideCursor: true,
-        format: `${colors.green}{commit}${colors.reset}  ${colors.white}{user}${colors.reset}     |  ${colors.yellow}{vector}${colors.reset}   | ${colors.blue}{bar}${colors.reset}           | ${colors.magenta}{state}${colors.reset}        | ${colors.bright}{tokens}${colors.reset}           | ${colors.cyan}{cost}${colors.reset}      | ${colors.green}{round}${colors.reset}`,
+        format: format,
         barCompleteChar: '█',
         barIncompleteChar: '░',
         barsize: 12,
@@ -152,6 +255,13 @@ export class ProgressTracker {
         failed: `${colors.red}error${colors.reset}`,
       };
       this.commitState.set(commitHash, stateMap[update.status] || update.status);
+
+      // Track completion and failure states
+      if (update.status === 'complete') {
+        this.completedCommits++;
+      } else if (update.status === 'failed') {
+        this.failedCommits++;
+      }
     }
 
     // Track vector store progress (0-100%) - gradual progress not instant
@@ -247,6 +357,12 @@ export class ProgressTracker {
    * Get summary of results
    */
   getSummary(): { total: number; complete: number; failed: number; pending: number } {
-    return { total: this.commits.size, complete: 0, failed: 0, pending: 0 };
+    const pending = this.commits.size - this.completedCommits - this.failedCommits;
+    return {
+      total: this.commits.size,
+      complete: this.completedCommits,
+      failed: this.failedCommits,
+      pending: pending,
+    };
   }
 }
