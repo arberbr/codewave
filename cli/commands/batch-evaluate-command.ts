@@ -396,6 +396,35 @@ export async function runBatchEvaluateCommand(args: string[]) {
           developerOverview: evaluationResult.developerOverview, // Pass developer overview directly
         });
 
+        // Send Slack notification if enabled (for each commit in batch)
+        if (config.slack?.enabled && config.slack.notifyOnBatch) {
+          try {
+            const { SlackService } = await import('../../src/services/slack.service.js');
+            const { createEvaluationZip } = await import('../../src/utils/zip-utils.js');
+
+            const slackService = new SlackService(config.slack.botToken);
+            if (slackService.isConfigured()) {
+              // Create ZIP file
+              const zipPath = await createEvaluationZip(commitOutputDir, commit.hash);
+
+              // Upload to Slack
+              await slackService.uploadZipFile(config.slack.channelId, zipPath, commit.hash, {
+                commitHash: commit.hash,
+                commitAuthor: commit.author,
+                commitMessage: commit.message,
+                commitDate: commit.date,
+                timestamp: metadata.timestamp,
+              });
+
+              // Note: We don't log here to avoid cluttering batch output
+              // Success/failure will be logged at the end if needed
+            }
+          } catch (error) {
+            // Don't fail the evaluation if Slack fails
+            // Errors are silently handled to not interrupt batch processing
+          }
+        }
+
         // Calculate aggregate metrics
         const metrics = calculateAggregateMetrics(agentResults);
 
@@ -499,6 +528,13 @@ export async function runBatchEvaluateCommand(args: string[]) {
 
   // Print final summary using shared output function
   printBatchCompletionMessage(summary);
+
+  // Notify about Slack uploads if enabled
+  if (config.slack?.enabled && config.slack.notifyOnBatch && results.length > 0) {
+    console.log(
+      `\n✅ ${results.length} evaluation result${results.length > 1 ? 's' : ''} sent to Slack: ${config.slack.channelId}`
+    );
+  }
 
   // Exit the process
   process.exit(0);

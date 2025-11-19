@@ -49,6 +49,13 @@ export const DEFAULT_CONFIG: AppConfig = {
     excludePatterns: ['node_modules/**', 'dist/**', '.git/**', 'coverage/**'],
     chunkSize: 1000,
   },
+  slack: {
+    enabled: false,
+    botToken: '',
+    channelId: '',
+    notifyOnSingle: true,
+    notifyOnBatch: true,
+  },
 };
 
 // For backwards compatibility

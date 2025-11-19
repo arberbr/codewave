@@ -48,4 +48,11 @@ export interface AppConfig {
     excludePatterns?: string[]; // ['node_modules/**', 'dist/**']
     chunkSize?: number; // Max chars per chunk (default: 1000)
   };
+  slack?: {
+    enabled: boolean;
+    botToken: string;
+    channelId: string;
+    notifyOnSingle: boolean; // Notify for single evaluations
+    notifyOnBatch: boolean; // Notify for batch evaluations
+  };
 }

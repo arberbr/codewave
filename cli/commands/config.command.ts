@@ -45,6 +45,13 @@ const DEFAULT_CONFIG = {
     project: 'codewave',
     endpoint: 'https://api.smith.langchain.com',
   },
+  slack: {
+    enabled: false,
+    botToken: '',
+    channelId: '',
+    notifyOnSingle: true,
+    notifyOnBatch: true,
+  },
 };
 
 /**
@@ -113,6 +120,9 @@ async function initializeConfig(): Promise<void> {
     }
     if (existingConfig.tracing) {
       config.tracing = { ...config.tracing, ...existingConfig.tracing };
+    }
+    if (existingConfig.slack) {
+      config.slack = { ...config.slack, ...existingConfig.slack };
     }
   }
 
@@ -358,6 +368,150 @@ async function initializeConfig(): Promise<void> {
     );
   }
 
+  // Slack integration setup (optional)
+  console.log(chalk.cyan('\n\n💬 Slack Integration Configuration (OPTIONAL)\n'));
+
+  const defaultSlackEnabled = config.slack?.enabled || false;
+  const { enableSlack } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'enableSlack',
+      message: 'Enable Slack notifications for evaluation results?',
+      default: defaultSlackEnabled,
+    },
+  ]);
+
+  if (enableSlack) {
+    const slackAnswers = await inquirer.prompt([
+      {
+        type: 'password',
+        name: 'botToken',
+        message: 'Enter Slack Bot User OAuth Token (xoxb-...) [press Enter to keep existing]:',
+        validate: (input: string) => {
+          // If user pressed Enter and there's an existing token, that's valid
+          if (!input || input.trim().length === 0) {
+            if (config.slack?.botToken) {
+              return true;
+            }
+            return 'Bot token is required when enabling Slack integration';
+          }
+          // Validate token format
+          if (!input.trim().startsWith('xoxb-')) {
+            return 'Bot token should start with "xoxb-"';
+          }
+          return true;
+        },
+        mask: '*',
+      },
+      {
+        type: 'input',
+        name: 'channelId',
+        message: 'Enter Slack Channel ID (C1234567890 for public, G... for private, D... for DM):',
+        default: config.slack?.channelId || '',
+        validate: (input: string) => {
+          if (!input || input.trim().length === 0) {
+            return 'Channel ID is required';
+          }
+          const channelId = input.trim();
+          // Validate channel ID format (starts with C, G, or D)
+          if (!/^[CGD][A-Z0-9]+$/.test(channelId)) {
+            return 'Channel ID should start with C (public), G (private), or D (DM)';
+          }
+          return true;
+        },
+      },
+      {
+        type: 'confirm',
+        name: 'notifyOnSingle',
+        message: 'Send notifications for single evaluations?',
+        default: config.slack?.notifyOnSingle !== undefined ? config.slack.notifyOnSingle : true,
+      },
+      {
+        type: 'confirm',
+        name: 'notifyOnBatch',
+        message: 'Send notifications for batch evaluations?',
+        default: config.slack?.notifyOnBatch !== undefined ? config.slack.notifyOnBatch : true,
+      },
+    ]);
+
+    config.slack = {
+      enabled: true,
+      botToken: slackAnswers.botToken.trim() || config.slack?.botToken || '',
+      channelId: slackAnswers.channelId.trim(),
+      notifyOnSingle: slackAnswers.notifyOnSingle,
+      notifyOnBatch: slackAnswers.notifyOnBatch,
+    };
+
+    console.log(chalk.green(`✅ Slack integration enabled for channel: ${config.slack.channelId}`));
+    console.log(
+      chalk.gray('   Single evaluations: ' + (config.slack.notifyOnSingle ? 'Enabled' : 'Disabled'))
+    );
+    console.log(
+      chalk.gray('   Batch evaluations: ' + (config.slack.notifyOnBatch ? 'Enabled' : 'Disabled'))
+    );
+
+    // Optional: Test connection
+    const { testConnection } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'testConnection',
+        message: 'Test Slack connection now?',
+        default: false,
+      },
+    ]);
+
+    if (testConnection) {
+      try {
+        const { SlackService } = await import('../../src/services/slack.service.js');
+        const slackService = new SlackService(config.slack.botToken);
+        const testResult = await slackService.testConnection(config.slack.channelId);
+        if (testResult.success) {
+          console.log(chalk.green('✅ Slack connection test successful!'));
+        } else {
+          console.log(chalk.yellow('⚠️  Slack connection test failed:'));
+          // Format multi-line error messages properly
+          const errorLines = (testResult.error || 'Unknown error').split('\n');
+          errorLines.forEach((line) => {
+            console.log(chalk.red(`   ${line}`));
+          });
+          console.log(chalk.gray('\n   Common issues:'));
+          console.log(chalk.gray('   • Bot token is invalid or expired'));
+          console.log(
+            chalk.gray('   • Bot is not added to the channel (REQUIRED for public channels)')
+          );
+          console.log(chalk.gray('   • Bot lacks "chat:write" permission'));
+          console.log(chalk.gray('   • Channel ID is incorrect'));
+          console.log(chalk.gray('\n   How to add bot to channel:'));
+          console.log(chalk.gray('   1. Go to the Slack channel'));
+          console.log(chalk.gray('   2. Type: /invite @YourBotName'));
+          console.log(chalk.gray('   3. Or: Channel settings → Integrations → Add apps'));
+          console.log(
+            chalk.gray('\n   Check your Slack app permissions at: https://api.slack.com/apps')
+          );
+        }
+      } catch (error) {
+        console.log(
+          chalk.yellow(
+            `⚠️  Could not test connection: ${error instanceof Error ? error.message : String(error)}`
+          )
+        );
+      }
+    }
+  } else {
+    config.slack = {
+      enabled: false,
+      botToken: '',
+      channelId: '',
+      notifyOnSingle: true,
+      notifyOnBatch: true,
+    };
+    console.log(
+      chalk.gray(
+        '   Skipped - you can enable it later with: codewave config --set slack.enabled=true'
+      )
+    );
+  }
+
   // Save configuration
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
   console.log(chalk.green(`\n✅ Created ${path.relative(process.cwd(), configPath)}`));
@@ -415,6 +569,7 @@ async function initializeConfig(): Promise<void> {
   console.log(chalk.gray(`  • Config file: ${path.relative(process.cwd(), configPath)}`));
   console.log(chalk.gray(`  • LLM Provider: ${config.llm.provider} (${config.llm.model})`));
   console.log(chalk.gray(`  • Tracing: ${config.tracing.enabled ? 'Enabled' : 'Disabled'}`));
+  console.log(chalk.gray(`  • Slack: ${config.slack?.enabled ? 'Enabled' : 'Disabled'}`));
   console.log(chalk.cyan('\n💡 Tips:'));
   console.log(chalk.gray('  • Change provider: codewave config --set llm.provider=openai'));
   console.log(chalk.gray('  • Change model: codewave config --set llm.model=gpt-4o'));
@@ -459,6 +614,9 @@ function listConfig(): void {
   }
   if (maskedConfig.tracing?.apiKey) {
     maskedConfig.tracing.apiKey = '***' + maskedConfig.tracing.apiKey.slice(-4);
+  }
+  if (maskedConfig.slack?.botToken) {
+    maskedConfig.slack.botToken = '***' + maskedConfig.slack.botToken.slice(-4);
   }
 
   console.log(chalk.cyan(`\n📋 Configuration (${path.relative(process.cwd(), configPath)}):\n`));

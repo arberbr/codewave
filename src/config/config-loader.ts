@@ -30,6 +30,12 @@ export function loadConfig(configPath?: string): AppConfig | null {
       agents: { ...DEFAULT_CONFIG.agents, ...(userConfig.agents || {}) },
       output: { ...DEFAULT_CONFIG.output, ...(userConfig.output || {}) },
       tracing: { ...DEFAULT_CONFIG.tracing, ...(userConfig.tracing || {}) },
+      slack: userConfig.slack
+        ? { ...DEFAULT_CONFIG.slack, ...userConfig.slack }
+        : DEFAULT_CONFIG.slack,
+      documentation: userConfig.documentation
+        ? { ...DEFAULT_CONFIG.documentation, ...userConfig.documentation }
+        : DEFAULT_CONFIG.documentation,
     };
 
     return merged;

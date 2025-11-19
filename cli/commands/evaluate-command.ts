@@ -502,6 +502,45 @@ export async function runEvaluateCommand(args: string[]) {
     developerOverview: evaluationResult.developerOverview,
   });
 
+  // Send Slack notification if enabled
+  if (config.slack?.enabled && config.slack.notifyOnSingle) {
+    try {
+      const { SlackService } = await import('../../src/services/slack.service.js');
+      const { createEvaluationZip } = await import('../../src/utils/zip-utils.js');
+
+      const slackService = new SlackService(config.slack.botToken);
+      if (slackService.isConfigured()) {
+        // Create ZIP file
+        const zipPath = await createEvaluationZip(outputDir, metadata.commitHash || commitHash);
+
+        // Upload to Slack
+        await slackService.uploadZipFile(
+          config.slack.channelId,
+          zipPath,
+          metadata.commitHash || commitHash,
+          {
+            commitHash: metadata.commitHash || commitHash,
+            commitAuthor: metadata.commitAuthor,
+            commitMessage: metadata.commitMessage,
+            commitDate: metadata.commitDate,
+            timestamp: metadata.timestamp,
+          }
+        );
+
+        console.log(
+          chalk.green(`\n✅ Evaluation results sent to Slack: ${config.slack.channelId}`)
+        );
+      }
+    } catch (error) {
+      // Don't fail the evaluation if Slack fails
+      console.log(
+        chalk.yellow(
+          `\n⚠️  Failed to send to Slack (evaluation completed successfully): ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
+    }
+  }
+
   // Print completion message using shared function
   printEvaluateCompletionMessage(outputDir);
 
