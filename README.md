@@ -663,7 +663,7 @@ CodeWave's evaluation happens across 3 structured rounds:
 Each agent independently evaluates the commit against their pillar metrics, providing initial scores and reasoning.
 
 **Duration**: ~30-60 seconds
-**Output**: Initial scores, concerns, and observations
+**Output**: Initial scores, concerns, and observations.
 
 ### Round 2: Concerns & Cross-Examination
 
