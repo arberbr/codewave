@@ -152,6 +152,10 @@ export async function runBatchEvaluateCommand(args: string[]) {
     if (/^\s+\[[\d]+\/[\d]+\]/.test(str)) {
       return true; // Suppress
     }
+    // Block OKR generation progress lines (e.g., "   📝 Generating comprehensive OKR draft...")
+    if (/^\s+[📝🧐✨]/u.test(str)) {
+      return true; // Suppress
+    }
     // Block explicit newlines from progress tracking
     if (str === '\n' || str === '\r\n') {
       return true; // Suppress
@@ -231,6 +235,29 @@ export async function runBatchEvaluateCommand(args: string[]) {
 
   // Print final summary using shared output function
   printBatchCompletionMessage(summary);
+
+  // Prompt for OKR generation (DRY - using shared helper)
+  if (summary.complete > 0) {
+    // Extract unique authors from successful evaluations
+    const uniqueAuthors = new Set<string>();
+    results.forEach((result) => {
+      if (result.commit.author) {
+        uniqueAuthors.add(result.commit.author);
+      }
+    });
+
+    const authors = Array.from(uniqueAuthors);
+    if (authors.length > 0) {
+      const { promptAndGenerateOkrs } = await import('../utils/okr-prompt.utils.js');
+      const { getEvaluationRoot } = await import('../utils/shared.utils.js');
+      const evalRoot = getEvaluationRoot();
+      await promptAndGenerateOkrs(config, authors, evalRoot, {
+        sinceDate: options.since ? new Date(options.since) : undefined,
+        silent: true, // Suppress OKR progress display during batch evaluation
+        concurrency: 10, // Match batch evaluation concurrency
+      });
+    }
+  }
 }
 
 async function evaluateCommit(
