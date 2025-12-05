@@ -55,4 +55,27 @@ export interface AppConfig {
     notifyOnSingle: boolean; // Notify for single evaluations
     notifyOnBatch: boolean; // Notify for batch evaluations
   };
+  pdfReport?: {
+    enabled: boolean;
+
+    // Output
+    outputDir: string;
+    outputFile: string;
+
+    // Section toggles
+    includeDeveloperOverview: boolean;
+    includeCommitMetadata: boolean;
+    includeAgentEvaluations: boolean;
+    includePillarSummary: boolean;
+    includeConversationTimeline: boolean;
+    includeHistory: boolean;
+
+    // Attach additional files inside the PDF (optional)
+    attachFiles?: boolean;
+    filesToAttach?: string[];
+
+    // Notifications (mirrors Slack config shape)
+    notifyOnSingle: boolean;
+    notifyOnBatch: boolean;
+  };
 }

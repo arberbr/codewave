@@ -19,7 +19,8 @@ import {
 import { ProgressTracker } from '../utils/progress-tracker';
 import { CostEstimatorService } from '../../src/services/cost-estimator.service';
 import { parseCommitStats } from '../../src/common/utils/commit-utils';
-
+import { SlackService } from '../../src/services/slack.service';
+import { createEvaluationZip } from '../../src/utils/zip-utils';
 interface CommitInfo {
   hash: string;
   author: string;
@@ -399,9 +400,6 @@ export async function runBatchEvaluateCommand(args: string[]) {
         // Send Slack notification if enabled (for each commit in batch)
         if (config.slack?.enabled && config.slack.notifyOnBatch) {
           try {
-            const { SlackService } = await import('../../src/services/slack.service.js');
-            const { createEvaluationZip } = await import('../../src/utils/zip-utils.js');
-
             const slackService = new SlackService(config.slack.botToken);
             if (slackService.isConfigured()) {
               // Create ZIP file

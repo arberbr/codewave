@@ -52,6 +52,25 @@ const DEFAULT_CONFIG = {
     notifyOnSingle: true,
     notifyOnBatch: true,
   },
+  pdfReport: {
+    enabled: true,
+
+    outputDir: './output',
+    outputFile: 'report.pdf',
+
+    includeDeveloperOverview: true,
+    includeCommitMetadata: true,
+    includeAgentEvaluations: true,
+    includePillarSummary: true,
+    includeConversationTimeline: true,
+    includeHistory: true,
+
+    attachFiles: false,
+    filesToAttach: [],
+
+    notifyOnSingle: true,
+    notifyOnBatch: true,
+  },
 };
 
 /**

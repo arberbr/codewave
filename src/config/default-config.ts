@@ -56,6 +56,30 @@ export const DEFAULT_CONFIG: AppConfig = {
     notifyOnSingle: true,
     notifyOnBatch: true,
   },
+  pdfReport: {
+    enabled: true,
+
+    outputDir: './output',
+    outputFile: 'report.pdf',
+
+    includeDeveloperOverview: true,
+    includeCommitMetadata: true,
+    includeAgentEvaluations: true,
+    includePillarSummary: true,
+    includeConversationTimeline: true,
+    includeHistory: true,
+
+    attachFiles: true,
+    filesToAttach: [
+      "conversation.md",
+      "results.json",
+      "summary.txt",
+      "commit.diff",
+      "history.json"
+    ],
+    notifyOnSingle: true,
+    notifyOnBatch: true,
+  },
 };
 
 // For backwards compatibility

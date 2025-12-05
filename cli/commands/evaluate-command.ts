@@ -14,8 +14,10 @@ import {
   createEvaluationDirectory,
   EvaluationMetadata,
   printEvaluateCompletionMessage,
+  updateEvaluationIndex,
 } from '../utils/shared.utils';
 import { parseCommitStats } from '../../src/common/utils/commit-utils';
+import { generateProfessionalPdfReport } from '../../src/formatters/pdf-report-formatter-professional';
 
 /**
  * Extract commit hash from diff content
@@ -502,6 +504,21 @@ export async function runEvaluateCommand(args: string[]) {
     developerOverview: evaluationResult.developerOverview,
   });
 
+  if(config.pdfReport?.enabled){
+    const pdfPath = path.join(outputDir, 'report-enhanced.pdf');
+    await generateProfessionalPdfReport(results, pdfPath, {
+      commitHash: metadata.commitHash,
+      commitAuthor: metadata.commitAuthor,
+      commitMessage: metadata.commitMessage,
+      commitDate: metadata.commitDate,
+      developerOverview: evaluationResult.developerOverview,
+      timestamp: new Date().toISOString(),
+    },
+      config
+  );
+
+    console.log(`PDF report generated at: ${pdfPath}`);
+  }
   // Send Slack notification if enabled
   if (config.slack?.enabled && config.slack.notifyOnSingle) {
     try {
@@ -526,7 +543,6 @@ export async function runEvaluateCommand(args: string[]) {
             timestamp: metadata.timestamp,
           }
         );
-
         console.log(
           chalk.green(`\n✅ Evaluation results sent to Slack: ${config.slack.channelId}`)
         );

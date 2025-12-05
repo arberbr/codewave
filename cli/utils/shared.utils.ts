@@ -18,6 +18,8 @@ import {
 } from '../../src/types/output.types';
 import fs from 'fs/promises';
 import path from 'path';
+import { generateProfessionalPdfReport } from '../../src/formatters/pdf-report-formatter-professional';
+import { getConfig } from '@langchain/langgraph';
 
 /**
  * Generate timestamp in yyyyMMddHHmmss format
@@ -156,6 +158,7 @@ export async function saveEvaluationReports(options: SaveReportsOptions): Promis
     deletions: metadata.commitStats?.deletions,
   });
 
+
   // 3. Generate conversation transcript
   generateConversationTranscript(agentResults, path.join(outputDir, 'conversation.md'), {
     commitHash: metadata.commitHash,
@@ -168,6 +171,7 @@ export async function saveEvaluationReports(options: SaveReportsOptions): Promis
   // 5. Generate summary text
   const summary = generateSummaryText(agentResults, metadata);
   await fs.writeFile(path.join(outputDir, 'summary.txt'), summary);
+
 
   // 6. Update evaluation index
   try {
