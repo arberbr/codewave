@@ -82,7 +82,7 @@ export async function generateProfessionalPdfReport(
   outputPath: string,
   metadata?: PdfMetadata,
   config?: any
-): Promise<void> {
+): Promise<string> {
   const pdfDoc = await PDFDocument.create();
 
   // --- Fonts & base setup ---
@@ -574,6 +574,7 @@ export async function generateProfessionalPdfReport(
 
   const pdfBytes = await pdfDoc.save();
   fs.writeFileSync(outputPath, pdfBytes);
+  return outputPath;
 }
 
 // ----------------- Helpers -------------------

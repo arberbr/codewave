@@ -18,6 +18,8 @@ import {
 } from '../utils/shared.utils';
 import { parseCommitStats } from '../../src/common/utils/commit-utils';
 import { generateProfessionalPdfReport } from '../../src/formatters/pdf-report-formatter-professional';
+import { SlackService } from '../../src/services/slack.service.js';
+import { createEvaluationZip } from '../../src/utils/zip-utils.js';
 
 /**
  * Extract commit hash from diff content
@@ -504,9 +506,10 @@ export async function runEvaluateCommand(args: string[]) {
     developerOverview: evaluationResult.developerOverview,
   });
 
+  let generatedPdfPath="";
   if(config.pdfReport?.enabled){
     const pdfPath = path.join(outputDir, 'report-enhanced.pdf');
-    await generateProfessionalPdfReport(results, pdfPath, {
+     generatedPdfPath= await generateProfessionalPdfReport(results, pdfPath, {
       commitHash: metadata.commitHash,
       commitAuthor: metadata.commitAuthor,
       commitMessage: metadata.commitMessage,
@@ -517,23 +520,25 @@ export async function runEvaluateCommand(args: string[]) {
       config
   );
 
-    console.log(`PDF report generated at: ${pdfPath}`);
+    console.log(`PDF report generated at: ${generatedPdfPath}`);
   }
   // Send Slack notification if enabled
   if (config.slack?.enabled && config.slack.notifyOnSingle) {
     try {
-      const { SlackService } = await import('../../src/services/slack.service.js');
-      const { createEvaluationZip } = await import('../../src/utils/zip-utils.js');
-
       const slackService = new SlackService(config.slack.botToken);
       if (slackService.isConfigured()) {
-        // Create ZIP file
-        const zipPath = await createEvaluationZip(outputDir, metadata.commitHash || commitHash);
+        let fileToUploadPath="";
+        if(config.pdfReport?.enabled){
+           fileToUploadPath=generatedPdfPath;
+        }
+        else{
+           fileToUploadPath = await createEvaluationZip(outputDir, metadata.commitHash || commitHash);
+        }
 
         // Upload to Slack
         await slackService.uploadZipFile(
           config.slack.channelId,
-          zipPath,
+          fileToUploadPath,
           metadata.commitHash || commitHash,
           {
             commitHash: metadata.commitHash || commitHash,
