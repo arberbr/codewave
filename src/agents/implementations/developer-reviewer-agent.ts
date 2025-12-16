@@ -69,7 +69,6 @@ Return your analysis as JSON with all 8 metrics, even if some are outside your p
     // Use RAG if available
     let contentSection = '';
     if (context.vectorStore || context.documentationStore) {
-
       const rag = new CombinedRAGHelper(context.vectorStore, context.documentationStore);
       rag.setAgentName(this.metadata.role);
 

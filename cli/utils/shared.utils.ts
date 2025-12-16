@@ -1471,8 +1471,8 @@ export async function generateAuthorPage(
 ${commits
   .map((item) => {
     const metrics = item.metrics || {};
-         // Calculate NET debt (debt introduced - debt reduction)
-      const netDebt = (metrics.technicalDebtHours || 0) - (metrics.debtReductionHours || 0);
+    // Calculate NET debt (debt introduced - debt reduction)
+    const netDebt = (metrics.technicalDebtHours || 0) - (metrics.debtReductionHours || 0);
 
     const qualityColor =
       metrics.codeQuality >= 7 ? 'good' : metrics.codeQuality >= 4 ? 'medium' : 'bad';
@@ -1484,8 +1484,7 @@ ${commits
       metrics.functionalImpact >= 7 ? 'good' : metrics.functionalImpact >= 4 ? 'medium' : 'bad';
     const commitScoreColor =
       metrics.commitScore >= 7 ? 'good' : metrics.commitScore >= 4 ? 'medium' : 'bad';
-    const debtColor =
-      netDebt > 0 ? 'bad' : netDebt < 0 ? 'good' : 'medium';
+    const debtColor = netDebt > 0 ? 'bad' : netDebt < 0 ? 'good' : 'medium';
 
     return `
                         <tr>

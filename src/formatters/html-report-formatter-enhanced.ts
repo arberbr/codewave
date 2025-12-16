@@ -352,10 +352,11 @@ function calculateMetricEvolution(
 
         // Calculate weighted consensus for this round
         if (contributors.length > 0) {
-          const consensusScore = calculateWeightedAverage(
-            contributors.map((c) => ({ agentName: c.agentName, score: c.score })),
-            metric
-          ) || 0;
+          const consensusScore =
+            calculateWeightedAverage(
+              contributors.map((c) => ({ agentName: c.agentName, score: c.score })),
+              metric
+            ) || 0;
           metricEvolution.rounds.set(round, consensusScore);
 
           // Check if value changed from first round

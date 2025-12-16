@@ -504,7 +504,6 @@ export function createCommitEvaluationGraph(agentRegistry: AgentRegistry, config
       );
     }
 
-
     // Sanitize results: filter metrics to ONLY the 7 pillars
     const results = validResponses.map((r) => {
       const sanitizedResult = { ...r.result };
