@@ -563,9 +563,7 @@ export async function generateProfessionalPdfReport(
   });
 
   const metadataConfig = config.pdfReport;
-  const chalk = require('chalk').default;
 
-  console.log(chalk.green('metadataConfig', metadataConfig));
   if (metadataConfig?.attachFiles && metadataConfig.filesToAttach?.length) {
     await embedFilesIntoPdf(pdfDoc, metadataConfig.filesToAttach, metadataConfig.outputDir);
   }

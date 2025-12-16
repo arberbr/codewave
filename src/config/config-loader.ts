@@ -33,6 +33,9 @@ export function loadConfig(configPath?: string): AppConfig | null {
       slack: userConfig.slack
         ? { ...DEFAULT_CONFIG.slack, ...userConfig.slack }
         : DEFAULT_CONFIG.slack,
+      pdfReport: userConfig.pdfReport
+        ? {...DEFAULT_CONFIG.pdfReport,...userConfig.pdfReport}
+        : DEFAULT_CONFIG.pdfReport,
       documentation: userConfig.documentation
         ? { ...DEFAULT_CONFIG.documentation, ...userConfig.documentation }
         : DEFAULT_CONFIG.documentation,
