@@ -1,151 +1,29 @@
 import * as fs from 'fs';
 import chalk from 'chalk';
-import crypto from 'crypto';
 import { spawnSync } from 'child_process';
-import cliProgress from 'cli-progress';
 import { CommitEvaluationOrchestrator } from '../../src/orchestrator/commit-evaluation-orchestrator';
 import { loadConfig, configExists } from '../../src/config/config-loader';
-import { generateHtmlReport } from '../../src/formatters/html-report-formatter';
-import path from 'path';
+import * as path from 'path';
 import {
   createAgentRegistry,
-  generateTimestamp,
   saveEvaluationReports,
   createEvaluationDirectory,
   EvaluationMetadata,
   printEvaluateCompletionMessage,
-  updateEvaluationIndex,
+  getEvaluationRoot,
 } from '../utils/shared.utils';
 import { parseCommitStats } from '../../src/common/utils/commit-utils';
+import { promptAndGenerateOkrs } from '../utils/okr-prompt.utils';
+import {
+  getCommitDiff,
+  getDiffFromStaged,
+  getDiffFromCurrent,
+  extractCommitHash,
+  generateDiffHash,
+} from '../utils/git-utils';
 import { generateProfessionalPdfReport } from '../../src/formatters/pdf-report-formatter-professional';
 import { SlackService } from '../../src/services/slack.service.js';
 import { createEvaluationZip } from '../../src/utils/zip-utils.js';
-
-/**
- * Extract commit hash from diff content
- */
-function extractCommitHash(diff: string): string | null {
-  // Try to find commit hash in diff header (git diff output)
-  const commitMatch = diff.match(/^commit ([a-f0-9]{40})/m);
-  if (commitMatch) {
-    return commitMatch[1].substring(0, 8); // Use short hash
-  }
-
-  // Try to find in "From" line (git format-patch)
-  const fromMatch = diff.match(/^From ([a-f0-9]{40})/m);
-  if (fromMatch) {
-    return fromMatch[1].substring(0, 8);
-  }
-
-  return null;
-}
-
-/**
- * Generate commit hash from diff content if not found
- */
-function generateDiffHash(diff: string): string {
-  return crypto.createHash('sha256').update(diff).digest('hex').substring(0, 8);
-}
-
-/**
- * Create structured output directory for commit evaluation
- */
-function createOutputDirectory(diff: string, baseDir: string = '.'): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  const timestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
-
-  // Try to extract commit hash, fallback to generated hash
-  const commitHash = extractCommitHash(diff) || generateDiffHash(diff);
-
-  // Create directory: .evaluated-commits/commit-hash_yyyyMMddHHmmss
-  const evaluationsRoot = path.join(baseDir, '.evaluated-commits');
-  const commitDir = path.join(evaluationsRoot, `${commitHash}_${timestamp}`);
-
-  // Create directories recursively
-  if (!fs.existsSync(evaluationsRoot)) {
-    fs.mkdirSync(evaluationsRoot, { recursive: true });
-  }
-
-  if (!fs.existsSync(commitDir)) {
-    fs.mkdirSync(commitDir, { recursive: true });
-  }
-
-  return commitDir;
-}
-
-/**
- * Get diff from git for a specific commit hash
- */
-function getDiffFromCommit(commitHash: string, repoPath: string = '.'): string {
-  const result = spawnSync('git', ['show', commitHash], {
-    cwd: repoPath,
-    encoding: 'utf-8',
-    maxBuffer: 10 * 1024 * 1024,
-  });
-
-  if (result.error) {
-    throw result.error;
-  }
-  if (result.status !== 0) {
-    throw new Error(`Git command failed: ${result.stderr}`);
-  }
-
-  return result.stdout;
-}
-
-/**
- * Get diff from current staged changes
- */
-function getDiffFromStaged(repoPath: string = '.'): string {
-  const result = spawnSync('git', ['diff', '--cached'], {
-    cwd: repoPath,
-    encoding: 'utf-8',
-    maxBuffer: 10 * 1024 * 1024,
-  });
-
-  if (result.error) {
-    throw result.error;
-  }
-  if (result.status !== 0) {
-    throw new Error(`Git command failed: ${result.stderr}`);
-  }
-
-  if (!result.stdout || result.stdout.trim().length === 0) {
-    throw new Error('No staged changes found. Use "git add" to stage your changes first.');
-  }
-
-  return result.stdout;
-}
-
-/**
- * Get diff from current working directory changes (staged + unstaged)
- */
-function getDiffFromCurrent(repoPath: string = '.'): string {
-  const result = spawnSync('git', ['diff', 'HEAD'], {
-    cwd: repoPath,
-    encoding: 'utf-8',
-    maxBuffer: 10 * 1024 * 1024,
-  });
-
-  if (result.error) {
-    throw result.error;
-  }
-  if (result.status !== 0) {
-    throw new Error(`Git command failed: ${result.stderr}`);
-  }
-
-  if (!result.stdout || result.stdout.trim().length === 0) {
-    throw new Error('No changes found in working directory.');
-  }
-
-  return result.stdout;
-}
 
 export async function runEvaluateCommand(args: string[]) {
   // -----------------------------
@@ -218,12 +96,14 @@ export async function runEvaluateCommand(args: string[]) {
       process.exit(1);
     }
     console.log(chalk.cyan(`\n📦 Fetching diff for commit: ${commitHash}\n`));
-    diff = getDiffFromCommit(commitHash, repoPath);
+    diff = getCommitDiff(commitHash, repoPath);
     source = 'commit';
     sourceDescription = commitHash;
   } else if (args[0] && !args[0].startsWith('--')) {
-    console.log(chalk.cyan(`\n📦 Fetching diff for commit: ${args[0]}\n`));
-    diff = getDiffFromCommit(args[0], repoPath);
+    // Positional argument: treat as commit hash (default behavior)
+    const commitHash = args[0];
+    console.log(chalk.cyan(`\n📦 Fetching diff for commit: ${commitHash}\n`));
+    diff = getCommitDiff(commitHash, repoPath);
     source = 'commit';
     sourceDescription = args[0];
   } else {
@@ -312,13 +192,40 @@ export async function runEvaluateCommand(args: string[]) {
     });
 
     // IMPORTANT: use canonical creator
-    outputDir = await createOutputDirectory(commitHash);
+    outputDir = await createEvaluationDirectory(commitHash);
 
     const commitStats = parseCommitStats(diff);
+
+    // Extract commit metadata if available
+    let commitAuthor: string | undefined;
+    let commitMessage: string | undefined;
+    let commitDate: string | undefined;
+
+    if (source === 'commit' && sourceDescription) {
+      // Get commit metadata
+      const showResult = spawnSync(
+        'git',
+        ['show', '--no-patch', '--format=%an|||%s|||%aI', sourceDescription],
+        {
+          cwd: repoPath,
+          encoding: 'utf-8',
+        }
+      );
+
+      if (showResult.status === 0 && showResult.stdout) {
+        const [author, message, date] = showResult.stdout.trim().split('|||');
+        commitAuthor = author;
+        commitMessage = message;
+        commitDate = date;
+      }
+    }
 
     const metadata: EvaluationMetadata = {
       timestamp: new Date().toISOString(),
       commitHash,
+      commitAuthor,
+      commitMessage,
+      commitDate,
       source,
       developerOverview: evaluationResult.developerOverview,
       commitStats,
@@ -394,7 +301,12 @@ export async function runEvaluateCommand(args: string[]) {
   // Completion
   // -----------------------------
   printEvaluateCompletionMessage(outputDir);
-  process.exit(0);
+
+  // Prompt for OKR generation if commit author is available
+  if (commitAuthor) {
+    const evalRoot = getEvaluationRoot();
+    await promptAndGenerateOkrs(config, [commitAuthor], evalRoot);
+  }
 }
 
 /* ---------------------------------------

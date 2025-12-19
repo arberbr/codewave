@@ -26,6 +26,7 @@ CodeWave is a sophisticated Node.js CLI tool that leverages multiple AI agents i
 - [The 5 AI Agents](#the-5-ai-agents)
 - [Multi-Round Conversation Framework](#multi-round-conversation-framework)
 - [Developer Overview](#developer-overview)
+- [Developer Growth Profiles & OKRs](#developer-growth-profiles--okrs)
 - [Advanced Features](#advanced-features)
   - [Analysis Depth Modes](#analysis-depth-modes)
   - [RAG for Large Diffs](#retrieval-augmented-generation-rag-for-large-diffs)
@@ -45,11 +46,13 @@ CodeWave is a sophisticated Node.js CLI tool that leverages multiple AI agents i
 ## Key Features
 
 - **🤖 Multi-Agent Conversations**: 5 specialized AI agents discuss commits across 3 rounds (Initial Assessment → Concerns → Validation & Agreement)
+- **🚀 Developer Growth Profiles & OKRs**: Generate comprehensive OKRs and growth profiles based on historical commit data
 - **📊 7-Pillar Methodology**: Comprehensive evaluation across Code Quality, Complexity, Timing, Technical Debt, Functional Impact, and Test Coverage
 - **🎨 Interactive HTML Reports**: Beautiful, timeline-based reports with conversation history and metric visualization
 - **📈 Batch Processing**: Evaluate multiple commits with real-time progress tracking
 - **🧠 RAG (Retrieval-Augmented Generation)**: Automatic handling of large diffs (>100KB) using vector storage and semantic search
 - **🔌 Multi-LLM Support**: Works with Anthropic Claude, OpenAI GPT, and Google Gemini
+- **🖥️ Local LLM Support (Ollama)**: Run free, local models like **Llama 3**, **Mistral**, or **Gemma 2** via Ollama — no API key or internet required
 - **⚡ Production-Ready**: LangGraph-based state machines with comprehensive error handling
 - **💾 JSON Output**: Structured results for programmatic access and CI/CD integration
 - **🎯 Zero Configuration**: Interactive setup wizard with sensible defaults
@@ -86,7 +89,7 @@ codewave config --init
 
 This launches an interactive wizard to configure:
 
-- **LLM Provider**: Choose Anthropic Claude, OpenAI, or Google Gemini
+- **LLM Provider**: Choose Anthropic Claude, OpenAI, Google Gemini, Groq or Ollama/LM Studio(local free models)
 - **API Keys**: Set your LLM provider credentials
 - **Model Selection**: Pick your preferred model (defaults recommended)
 - **Default Settings**: Configure batch size, output directory, and reporting preferences
@@ -136,7 +139,7 @@ start .evaluated-commits\*\report.html                 # Windows
 - **Node.js**: 18.0.0 or later
 - **npm**: 9.0.0 or later
 - **Git**: 2.0.0 or later
-- **LLM API Key**: Claude, OpenAI, or Google Gemini
+- **LLM API Key**: Claude, OpenAI, or Google Gemini (not required for local models)
 
 ### Install from npm
 
@@ -238,6 +241,22 @@ ls -1 .evaluated-commits/ | wc -l
 
 # Calculate total cost
 jq -s '[.[].totalCost] | add' .evaluated-commits/*/results.json
+```
+
+### generate-okr - Generate Developer OKRs
+
+```bash
+codewave generate-okr [options]
+```
+
+**Examples:**
+
+```bash
+# Generate OKRs for all authors based on last 3 months
+codewave generate-okr
+
+# Generate for specific authors
+codewave generate-okr --authors "John Doe" --months 6
 ```
 
 ### config - Manage Configuration
@@ -663,7 +682,7 @@ CodeWave's evaluation happens across 3 structured rounds:
 Each agent independently evaluates the commit against their pillar metrics, providing initial scores and reasoning.
 
 **Duration**: ~30-60 seconds
-**Output**: Initial scores, concerns, and observations
+**Output**: Initial scores, concerns, and observations.
 
 ### Round 2: Concerns & Cross-Examination
 
@@ -724,6 +743,33 @@ The Developer Overview provides:
 - **Documentation**: Auto-generated change documentation
 
 For detailed information about Developer Overview generation, convergence detection, and multi-round discussion, see [ADVANCED_FEATURES.md](./docs/ADVANCED_FEATURES.md).
+
+---
+
+## Developer Growth Profiles & OKRs
+
+CodeWave goes beyond single-commit analysis by aggregating historical data to generate comprehensive **Developer Growth Profiles** and **Objectives and Key Results (OKRs)**.
+
+### What It Does
+
+- **Analyzes History**: Scans a developer's commit history (e.g., last 3-6 months)
+- **Identifies Patterns**: Detects strengths, weaknesses, and recurring themes in code quality, complexity handling, and testing
+- **Generates OKRs**: Creates tailored Objectives and Key Results to help the developer improve
+- **Creates Growth Profile**: Summarizes the developer's current standing and growth trajectory
+
+### How to Use
+
+```bash
+# Generate for all authors
+codewave generate-okr
+
+# Generate for a specific author with custom timeframe
+codewave generate-okr --authors "Jane Doe" --months 6
+```
+
+### Output
+
+The generated OKRs and profiles are integrated into the **Author Dashboard** in the HTML report, providing a holistic view of developer performance.
 
 ---
 
@@ -918,6 +964,24 @@ Choose your LLM provider and model based on your needs and budget:
 - Specialized use cases
 - **Recommended**: grok-4-fast-non-reasoning
 - **Alternatives**: grok-4.2, grok-4-0709
+
+**Groq**
+
+- Cost-effective option
+- **Recommended**: openai/gpt-oss-120b
+- **Alternatives**: openai/gpt-oss-20b
+
+**Ollama (Local LLMs — Free)**
+
+- Run models entirely on your machine (no API key required)
+- Supports **Llama 3**, **Mistral**, **Gemma 2**, and more
+- Works offline once the model is pulled
+- Ideal for contributors or privacy-sensitive environments
+
+**LM Studio (Local LLMs — Free)**
+
+- OpenAI-compatible local server
+- Ideal for contributors or privacy-sensitive environments
 
 **Example**: Switch to OpenAI
 

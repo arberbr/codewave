@@ -9,10 +9,15 @@
 // Tertiary expertise (~8-13%): Areas where agent has limited but valuable perspective
 
 /**
- * The 7 immutable evaluation pillars
- * All agents MUST return scores for all 7 pillars and ONLY these pillars
+ * The 7 conceptual evaluation pillars
+ *
+ * Note: We collect 8 raw metrics from agents (including both technicalDebtHours
+ * and debtReductionHours separately), but present 7 pillars to users where the
+ * 7th pillar is netDebt (calculated as technicalDebtHours - debtReductionHours).
+ *
+ * All agents MUST return scores for all 8 raw metrics.
  */
-export const EIGHT_PILLARS = [
+export const SEVEN_PILLARS = [
   'functionalImpact',
   'idealTimeHours',
   'testCoverage',
@@ -23,10 +28,7 @@ export const EIGHT_PILLARS = [
   'debtReductionHours',
 ] as const;
 
-// Backward compatibility alias
-export const SEVEN_PILLARS = EIGHT_PILLARS;
-
-export type PillarName = (typeof EIGHT_PILLARS)[number];
+export type PillarName = (typeof SEVEN_PILLARS)[number];
 
 export interface AgentWeights {
   functionalImpact: number;
@@ -162,7 +164,7 @@ export function normalizeAgentName(agentName: string): string {
 }
 
 // Helper: Get agent's weight for a specific pillar
-export function getAgentWeight(agentName: string, pillar: keyof AgentWeights): number {
+export function getAgentWeight(agentName: string, pillar: PillarName): number {
   // Normalize agent name before lookup
   const normalizedName = normalizeAgentName(agentName);
   const weights = AGENT_EXPERTISE_WEIGHTS[normalizedName];
@@ -175,7 +177,7 @@ export function getAgentWeight(agentName: string, pillar: keyof AgentWeights): n
 }
 
 // Helper: Get all agents' weights for a specific pillar
-export function getPillarWeights(pillar: keyof AgentWeights): Record<string, number> {
+export function getPillarWeights(pillar: PillarName): Record<string, number> {
   const result: Record<string, number> = {};
   for (const [agentName, weights] of Object.entries(AGENT_EXPERTISE_WEIGHTS)) {
     result[agentName] = weights[pillar];
@@ -186,7 +188,7 @@ export function getPillarWeights(pillar: keyof AgentWeights): Record<string, num
 // Weighted average calculation
 export function calculateWeightedAverage(
   scores: Array<{ agentName: string; score: number | null }>,
-  pillar: keyof AgentWeights
+  pillar: PillarName
 ): number | null {
   // Filter out null values before calculating average
   const validScores = scores.filter(
