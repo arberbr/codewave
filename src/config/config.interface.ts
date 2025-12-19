@@ -56,8 +56,7 @@ export interface AppConfig {
     enabled: boolean;
     botToken: string;
     channelId: string;
-    notifyOnSingle: boolean; // Notify for single evaluations
-    notifyOnBatch: boolean; // Notify for batch evaluations
+    notifyOnSingle: boolean; // Notify for single evaluations (default: true, can be changed in config)
   };
   pdfReport?: {
     enabled: boolean;
@@ -77,9 +76,5 @@ export interface AppConfig {
     // Attach additional files inside the PDF (optional)
     attachFiles?: boolean;
     filesToAttach?: string[];
-
-    // Notifications (mirrors Slack config shape)
-    notifyOnSingle: boolean;
-    notifyOnBatch: boolean;
   };
 }

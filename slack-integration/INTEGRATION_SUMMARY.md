@@ -12,7 +12,7 @@ This document summarizes the complete plan for integrating PostgreSQL database s
 - 7-Pillar metrics calculation
 - Conversation tracking
 - Token usage tracking
-- Slack ZIP file uploads
+- Slack PDF file uploads
 
 ❌ **Not Working:**
 - Database storage and sync
@@ -24,7 +24,7 @@ This document summarizes the complete plan for integrating PostgreSQL database s
 1. **Database Integration**: Save all evaluation data to PostgreSQL
 2. **Web Visualization**: Next.js app to display evaluations
 3. **Shareable Links**: Generate `<DOMAIN>/<USERNAME_REPO_NAME>/` URLs
-4. **Slack Integration**: Send links instead of ZIP files
+4. **Slack Integration**: Send links and PDF files
 
 ## Architecture Overview
 
@@ -153,8 +153,8 @@ This document summarizes the complete plan for integrating PostgreSQL database s
 
 ### Phase 4: Slack Integration Update
 
-**Current**: Sends ZIP file to Slack
-**New**: Send shareable link to Slack
+**Current**: Sends PDF file to Slack
+**New**: Send shareable link to Slack and also PDF file
 
 **Changes Needed:**
 - Modify `src/services/slack.service.ts`

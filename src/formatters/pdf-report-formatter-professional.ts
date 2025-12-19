@@ -167,7 +167,9 @@ export async function generateProfessionalPdfReport(
     const font = options.bold ? boldFont : regularFont;
     const color = options.color ?? rgb(0, 0, 0);
 
-    const lines = wrapText(text, font, fontSize, contentWidth);
+    // Sanitize text to remove unsupported Unicode characters
+    const sanitizedText = sanitizeTextForPdf(text);
+    const lines = wrapText(sanitizedText, font, fontSize, contentWidth);
 
     for (const line of lines) {
       ensureSpace(fontSize + 6);
@@ -188,7 +190,9 @@ export async function generateProfessionalPdfReport(
     font: any,
     color: ReturnType<typeof rgb> = darkGray
   ) {
-    const lines = wrapText(text, font, fontSize, contentWidth);
+    // Sanitize text to remove unsupported Unicode characters
+    const sanitizedText = sanitizeTextForPdf(text);
+    const lines = wrapText(sanitizedText, font, fontSize, contentWidth);
     for (const line of lines) {
       ensureSpace(fontSize + 6);
       page.drawText(line, {
@@ -229,7 +233,7 @@ export async function generateProfessionalPdfReport(
   function drawKeyValue(label: string, value?: string | number) {
     if (!value && value !== 0) return;
     ensureSpace(14 + 4);
-    const labelText = `${label}: `;
+    const labelText = sanitizeTextForPdf(`${label}: `);
     const labelWidth = boldFont.widthOfTextAtSize(labelText, 9);
 
     page.drawText(labelText, {
@@ -240,7 +244,7 @@ export async function generateProfessionalPdfReport(
       color: darkGray,
     });
 
-    page.drawText(String(value), {
+    page.drawText(sanitizeTextForPdf(String(value)), {
       x: pageMargin + labelWidth,
       y: cursorY,
       size: 9,
@@ -345,7 +349,7 @@ export async function generateProfessionalPdfReport(
       borderWidth: 0.5,
     });
 
-    page.drawText(item.label, {
+    page.drawText(sanitizeTextForPdf(item.label), {
       x: x + 8,
       y: yTop - paddingVertical - labelFontSize,
       size: labelFontSize,
@@ -355,7 +359,7 @@ export async function generateProfessionalPdfReport(
 
     const valText =
       item.value === null || item.value === undefined
-        ? '—'
+        ? '-'
         : item.key === 'idealTimeHours' ||
             item.key === 'actualTimeHours' ||
             item.key === 'technicalDebtHours' ||
@@ -363,7 +367,7 @@ export async function generateProfessionalPdfReport(
           ? `${item.value.toFixed(1)} h`
           : item.value.toFixed(1);
 
-    page.drawText(valText, {
+    page.drawText(sanitizeTextForPdf(valText), {
       x: x + 8,
       y: yTop - paddingVertical - labelFontSize - paddingInner - valueFontSize,
       size: valueFontSize,
@@ -431,7 +435,7 @@ export async function generateProfessionalPdfReport(
     });
 
     // Agent name
-    page.drawText(agentName, {
+    page.drawText(sanitizeTextForPdf(agentName), {
       x: pageMargin + 10,
       y: cardTopY - 14,
       size: 11,
@@ -440,7 +444,7 @@ export async function generateProfessionalPdfReport(
     });
 
     // Rounds
-    page.drawText(`Rounds: ${evals.length}`, {
+    page.drawText(sanitizeTextForPdf(`Rounds: ${evals.length}`), {
       x: pageMargin + 10,
       y: cardTopY - 28,
       size: 9,
@@ -451,7 +455,8 @@ export async function generateProfessionalPdfReport(
     // Summary (left)
     const leftContentX = pageMargin + 10;
     let summaryY = cardTopY - 42;
-    const wrappedSummary = wrapText(summaryText, regularFont, 9, leftColumnWidth - 20);
+    const sanitizedSummary = sanitizeTextForPdf(summaryText);
+    const wrappedSummary = wrapText(sanitizedSummary, regularFont, 9, leftColumnWidth - 20);
 
     wrappedSummary.forEach((line) => {
       page.drawText(line, {
@@ -473,7 +478,7 @@ export async function generateProfessionalPdfReport(
         .slice(0, 7)
         .forEach(([key, value]) => {
           const label = prettifyMetricKey(key);
-          page.drawText(`${label}: ${value}`, {
+          page.drawText(sanitizeTextForPdf(`${label}: ${value}`), {
             x: metricX,
             y: metricY,
             size: 8.5,
@@ -494,9 +499,10 @@ export async function generateProfessionalPdfReport(
   drawSectionTitle('Conversation Timeline (Compact)');
 
   timelineEntries.forEach((entry) => {
-    const prefix = `Round ${entry.round} • ${entry.agent}: `;
+    const prefix = `Round ${entry.round} - ${entry.agent}: `;
     const fullText = prefix + entry.summary;
-    const lines = wrapText(fullText, regularFont, 9, contentWidth);
+    const sanitizedFullText = sanitizeTextForPdf(fullText);
+    const lines = wrapText(sanitizedFullText, regularFont, 9, contentWidth);
 
     lines.forEach((line, idx) => {
       ensureSpace(14);
@@ -523,8 +529,8 @@ export async function generateProfessionalPdfReport(
       const ts = new Date(h.timestamp).toLocaleString();
       ensureSpace(30);
 
-      const header = `#${h.evaluationNumber} • ${ts}`;
-      page.drawText(header, {
+      const header = `#${h.evaluationNumber} - ${ts}`;
+      page.drawText(sanitizeTextForPdf(header), {
         x: pageMargin,
         y: cursorY,
         size: 9,
@@ -537,7 +543,8 @@ export async function generateProfessionalPdfReport(
       const line = `Functional Impact: ${safeNumber(m.functionalImpact)} | Code Quality: ${safeNumber(
         m.codeQuality
       )} | Tech Debt (h): ${safeNumber(m.technicalDebtHours)}`;
-      const wrapped = wrapText(line, regularFont, 8.5, contentWidth);
+      const sanitizedLine = sanitizeTextForPdf(line);
+      const wrapped = wrapText(sanitizedLine, regularFont, 8.5, contentWidth);
       wrapped.forEach((w) => {
         ensureSpace(12);
         page.drawText(w, {
@@ -660,4 +667,29 @@ function prettifyMetricKey(key: string): string {
 
 function safeNumber(value: unknown): string {
   return typeof value === 'number' ? value.toFixed(2) : 'N/A';
+}
+
+/**
+ * Sanitize text for PDF rendering by replacing Unicode characters
+ * that aren't supported by WinAnsi encoding with ASCII equivalents.
+ */
+function sanitizeTextForPdf(text: string): string {
+  if (!text) return text;
+  
+  // Replace common Unicode arrows and symbols with ASCII equivalents
+  return text
+    .replace(/→/g, '->')      // Right arrow
+    .replace(/←/g, '<-')       // Left arrow
+    .replace(/↑/g, '^')        // Up arrow
+    .replace(/↓/g, 'v')        // Down arrow
+    .replace(/—/g, '-')        // Em dash
+    .replace(/–/g, '-')        // En dash
+    .replace(/"/g, '"')        // Left double quote
+    .replace(/"/g, '"')        // Right double quote
+    .replace(/'/g, "'")        // Left single quote
+    .replace(/'/g, "'")        // Right single quote
+    .replace(/…/g, '...')      // Ellipsis
+    .replace(/©/g, '(c)')      // Copyright
+    .replace(/®/g, '(R)')      // Registered
+    .replace(/™/g, '(TM)');    // Trademark
 }

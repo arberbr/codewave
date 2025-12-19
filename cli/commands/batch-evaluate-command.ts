@@ -14,8 +14,6 @@ import {
 import { ProgressTracker } from '../utils/progress-tracker';
 import { CostEstimatorService } from '../../src/services/cost-estimator.service';
 import { parseCommitStats } from '../../src/common/utils/commit-utils';
-import { SlackService } from '../../src/services/slack.service';
-import { createEvaluationZip } from '../../src/utils/zip-utils';
 import { consoleManager } from '../../src/common/utils/console-manager';
 import { getCommitDiff, extractFilesFromDiff } from '../utils/git-utils';
 import { isDiagnosticLog } from '../utils/diagnostic-filter';
@@ -187,31 +185,8 @@ export async function runBatchEvaluateCommand(args: string[]) {
       if (result) {
         successCount++;
         
-        // Send Slack notification if enabled (for each commit in batch)
-        if (config.slack?.enabled && config.slack.notifyOnBatch) {
-          try {
-            const slackService = new SlackService(config.slack.botToken);
-            if (slackService.isConfigured()) {
-              // Create ZIP file
-              const zipPath = await createEvaluationZip(result.outputDir, commit.hash);
-
-              // Upload to Slack
-              await slackService.uploadZipFile(config.slack.channelId, zipPath, commit.hash, {
-                commitHash: commit.hash,
-                commitAuthor: commit.author,
-                commitMessage: commit.message,
-                commitDate: commit.date,
-                timestamp: new Date().toISOString(),
-              });
-
-              // Note: We don't log here to avoid cluttering batch output
-              // Success/failure will be logged at the end if needed
-            }
-          } catch (error) {
-            // Don't fail the evaluation if Slack fails
-            // Errors are silently handled to not interrupt batch processing
-          }
-        }
+        // Note: Slack notifications are only supported for single evaluations
+        // Batch notifications have been removed to avoid spamming channels
       } else {
         failureCount++;
       }
@@ -279,13 +254,6 @@ export async function runBatchEvaluateCommand(args: string[]) {
 
   // Print final summary using shared output function
   printBatchCompletionMessage(summary);
-
-  // Notify about Slack uploads if enabled
-  if (config.slack?.enabled && config.slack.notifyOnBatch && results.length > 0) {
-    console.log(
-      `\n✅ ${results.length} evaluation result${results.length > 1 ? 's' : ''} sent to Slack: ${config.slack.channelId}`
-    );
-  }
 
   // Prompt for OKR generation (DRY - using shared helper)
   if (summary.complete > 0) {

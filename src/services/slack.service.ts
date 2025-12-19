@@ -5,12 +5,16 @@ import { WebClient } from '@slack/web-api';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { MetricScores } from '../types/output.types';
+
 export interface EvaluationMetadata {
   commitHash: string;
   commitAuthor?: string;
   commitMessage?: string;
   commitDate?: string;
   timestamp?: string;
+  source?: string;
+  metrics?: Partial<MetricScores>;
 }
 
 /**
@@ -35,17 +39,17 @@ export class SlackService {
   }
 
   /**
-   * Upload ZIP file to Slack channel
+   * Upload the PDF file to Slack channel
    *
    * @param channelId - Slack channel ID (e.g., C1234567890)
-   * @param zipPath - Path to ZIP file
+   * @param filePath - Path to PDF File
    * @param commitHash - Commit hash for message context
-   * @param metadata - Additional evaluation metadata
+   * @param metadata - Additional evaluation metadata including metrics
    * @returns true if successful, false otherwise
    */
-  async uploadZipFile(
+  async uploadFile(
     channelId: string,
-    zipPath: string,
+    filePath: string,
     commitHash: string,
     metadata?: EvaluationMetadata
   ): Promise<boolean> {
@@ -53,24 +57,24 @@ export class SlackService {
       throw new Error('Slack client not initialized. Check bot token.');
     }
 
-    // Validate ZIP file exists
-    if (!fs.existsSync(zipPath)) {
-      throw new Error(`ZIP file not found: ${zipPath}`);
+    // Validate file exists
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
     }
 
     try {
-      // Read ZIP file
-      const zipBuffer = fs.readFileSync(zipPath);
-      const zipFilename = path.basename(zipPath);
+      // Read file
+      const fileBuffer = fs.readFileSync(filePath);
+      const filename = path.basename(filePath);
 
-      // Create initial comment with metadata
+      // Create initial comment with metadata and metrics
       const comment = this.buildComment(commitHash, metadata);
 
       // Upload file using files.uploadV2 (not deprecated files.upload)
       const result = await this.client.files.uploadV2({
         channel_id: channelId,
-        file: zipBuffer,
-        filename: zipFilename,
+        file: fileBuffer,
+        filename: filename,
         title: `CodeWave Evaluation: ${commitHash.substring(0, 8)}`,
         initial_comment: comment,
       });
@@ -113,30 +117,107 @@ export class SlackService {
   }
 
   /**
-   * Build comment text with evaluation metadata
+   * Build comment text with evaluation metadata and metrics
    */
   private buildComment(commitHash: string, metadata?: EvaluationMetadata): string {
     const lines: string[] = [];
-    lines.push(`📊 *CodeWave Evaluation Results*`);
-    lines.push(`Commit: \`${commitHash.substring(0, 8)}\``);
+    lines.push(`📊 *CodeWave Evaluation Results*\n`);
 
-    if (metadata?.commitMessage) {
-      lines.push(
-        `Message: ${metadata.commitMessage.substring(0, 100)}${metadata.commitMessage.length > 100 ? '...' : ''}`
-      );
-    }
-
+    // Commit basic info - first line
+    const commitInfo: string[] = [];
+    commitInfo.push(`*Hash:* \`${commitHash.substring(0, 8)}\``);
+    
     if (metadata?.commitAuthor) {
-      lines.push(`Author: ${metadata.commitAuthor}`);
+      commitInfo.push(`*Author:* ${metadata.commitAuthor}`);
     }
 
     if (metadata?.commitDate) {
-      lines.push(`Date: ${metadata.commitDate}`);
+      // Format date from ISO string to MM/DD/YYYY
+      const commitDate = new Date(metadata.commitDate);
+      const formattedCommitDate = commitDate.toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric'
+      });
+      commitInfo.push(`*Date:* ${formattedCommitDate}`);
     }
 
-    lines.push(
-      `\nThis ZIP contains the complete evaluation report, conversation transcript, and analysis results.`
-    );
+    if (metadata?.timestamp) {
+      const evalDate = new Date(metadata.timestamp);
+      const formattedEvalDate = evalDate.toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric'
+      });
+      commitInfo.push(`*Last Evaluated:* ${formattedEvalDate}`);
+    }
+
+    if (metadata?.source) {
+      commitInfo.push(`*Source:* ${metadata.source}`);
+    }
+
+    // Add each commit info field on its own line
+    commitInfo.forEach(info => lines.push(info));
+    
+    // Message on its own line if available
+    if (metadata?.commitMessage) {
+      lines.push(`*Message:* ${metadata.commitMessage}`);
+    }
+    
+    lines.push('');
+
+    // Metrics section
+    if (metadata?.metrics) {
+      const metrics = metadata.metrics;
+      const metricsLines: string[] = [];
+      
+      // Quality (Code Quality)
+      if (metrics.codeQuality !== undefined) {
+        const quality = metrics.codeQuality.toFixed(1);
+        metricsLines.push(`*Quality:* ${quality}/10`);
+      }
+
+      // Complexity (Code Complexity)
+      if (metrics.codeComplexity !== undefined) {
+        const complexity = metrics.codeComplexity.toFixed(1);
+        metricsLines.push(`*Complexity:* ${complexity}/10`);
+      }
+
+      // Tests (Test Coverage)
+      if (metrics.testCoverage !== undefined) {
+        const tests = metrics.testCoverage.toFixed(1);
+        metricsLines.push(`*Tests:* ${tests}/10`);
+      }
+
+      // Impact (Functional Impact)
+      if (metrics.functionalImpact !== undefined) {
+        const impact = metrics.functionalImpact.toFixed(1);
+        metricsLines.push(`*Impact:* ${impact}/10`);
+      }
+
+      // Commit Score
+      if (metrics.commitScore !== undefined) {
+        const score = metrics.commitScore.toFixed(1);
+        metricsLines.push(`*Commit Score:* ${score}/10`);
+      }
+
+      // Time (Actual Time Hours)
+      if (metrics.actualTimeHours !== undefined) {
+        const time = metrics.actualTimeHours.toFixed(1);
+        metricsLines.push(`*Time:* ${time}h`);
+      }
+
+      // Tech Debt (Technical Debt Hours - can be negative)
+      if (metrics.technicalDebtHours !== undefined) {
+        const techDebt = metrics.technicalDebtHours.toFixed(1);
+        metricsLines.push(`*Tech Debt:* ${techDebt}h`);
+      }
+
+      // Add each metric on its own line
+      if (metricsLines.length > 0) {
+        metricsLines.forEach(metric => lines.push(metric));
+      }
+    }
 
     return lines.join('\n');
   }

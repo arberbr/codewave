@@ -23,7 +23,7 @@ import {
 } from '../utils/git-utils';
 import { generateProfessionalPdfReport } from '../../src/formatters/pdf-report-formatter-professional';
 import { SlackService } from '../../src/services/slack.service.js';
-import { createEvaluationZip } from '../../src/utils/zip-utils.js';
+import { MetricsCalculationService } from '../../src/services/metrics-calculation.service';
 
 export async function runEvaluateCommand(args: string[]) {
   // -----------------------------
@@ -153,6 +153,9 @@ export async function runEvaluateCommand(args: string[]) {
   // -----------------------------
   let outputDir: string;
   let evaluationResult: any;
+  let commitAuthor: string | undefined;
+  let commitMessage: string | undefined;
+  let commitDate: string | undefined;
 
   if (attachOnly) {
     outputDir = findExistingEvaluationDirectory(commitHash);
@@ -197,10 +200,6 @@ export async function runEvaluateCommand(args: string[]) {
     const commitStats = parseCommitStats(diff);
 
     // Extract commit metadata if available
-    let commitAuthor: string | undefined;
-    let commitMessage: string | undefined;
-    let commitDate: string | undefined;
-
     if (source === 'commit' && sourceDescription) {
       // Get commit metadata
       const showResult = spawnSync(
@@ -241,45 +240,45 @@ export async function runEvaluateCommand(args: string[]) {
   }
 
   // -----------------------------
-  // PDF generation (UNCHANGED)
+  // PDF generation (always generated for single evaluations)
   // -----------------------------
-
-
-  console.log(
-    chalk.cyan(`\n🚀 config... pdfReport enabled: ${config.pdfReport?.enabled}\n`)
+  const generatedPdfPath = await generateProfessionalPdfReport(
+    evaluationResult.agentResults,
+    path.join(outputDir, 'report-enhanced.pdf'),
+    {
+      commitHash,
+      developerOverview: evaluationResult.developerOverview,
+      timestamp: new Date().toISOString(),
+    },
+    config
   );
 
-
-  let generatedPdfPath = '';
-  if (config.pdfReport?.enabled) {
-    generatedPdfPath = await generateProfessionalPdfReport(
-      evaluationResult.agentResults,
-      path.join(outputDir, 'report-enhanced.pdf'),
-      {
-        commitHash,
-        developerOverview: evaluationResult.developerOverview,
-        timestamp: new Date().toISOString(),
-      },
-      config
-    );
-  }
-
   // -----------------------------
-  // Slack notification (UNCHANGED)
+  // Slack notification (always sends PDF)
   // -----------------------------
   if (config.slack?.enabled && config.slack.notifyOnSingle) {
     try {
       const slackService = new SlackService(config.slack.botToken);
       if (slackService.isConfigured()) {
-        const uploadPath = config.pdfReport?.enabled
-          ? generatedPdfPath
-          : await createEvaluationZip(outputDir, commitHash);
 
-        await slackService.uploadZipFile(
+        // Extract metrics from evaluation results
+        const metrics = MetricsCalculationService.calculateWeightedMetrics(
+          evaluationResult.agentResults
+        );
+
+        await slackService.uploadFile(
           config.slack.channelId,
-          uploadPath,
+          generatedPdfPath,
           commitHash,
-          { commitHash }
+          {
+            commitHash,
+            commitAuthor,
+            commitMessage,
+            commitDate,
+            timestamp: new Date().toISOString(),
+            source,
+            metrics,
+          }
         );
 
         console.log(

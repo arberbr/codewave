@@ -54,26 +54,6 @@ const DEFAULT_CONFIG = {
     botToken: '',
     channelId: '',
     notifyOnSingle: true,
-    notifyOnBatch: true,
-  },
-  pdfReport: {
-    enabled: true,
-
-    outputDir: './output',
-    outputFile: 'report.pdf',
-
-    includeDeveloperOverview: true,
-    includeCommitMetadata: true,
-    includeAgentEvaluations: true,
-    includePillarSummary: true,
-    includeConversationTimeline: true,
-    includeHistory: true,
-
-    attachFiles: false,
-    filesToAttach: [],
-
-    notifyOnSingle: true,
-    notifyOnBatch: true,
   },
 };
 
@@ -487,82 +467,56 @@ async function initializeConfig(): Promise<void> {
           return true;
         },
       },
-      {
-        type: 'confirm',
-        name: 'notifyOnSingle',
-        message: 'Send notifications for single evaluations?',
-        default: config.slack?.notifyOnSingle !== undefined ? config.slack.notifyOnSingle : true,
-      },
-      {
-        type: 'confirm',
-        name: 'notifyOnBatch',
-        message: 'Send notifications for batch evaluations?',
-        default: config.slack?.notifyOnBatch !== undefined ? config.slack.notifyOnBatch : true,
-      },
     ]);
 
     config.slack = {
       enabled: true,
       botToken: slackAnswers.botToken.trim() || config.slack?.botToken || '',
       channelId: slackAnswers.channelId.trim(),
-      notifyOnSingle: slackAnswers.notifyOnSingle,
-      notifyOnBatch: slackAnswers.notifyOnBatch,
+      notifyOnSingle: config.slack?.notifyOnSingle !== undefined ? config.slack.notifyOnSingle : true,
     };
 
     console.log(chalk.green(`✅ Slack integration enabled for channel: ${config.slack.channelId}`));
     console.log(
       chalk.gray('   Single evaluations: ' + (config.slack.notifyOnSingle ? 'Enabled' : 'Disabled'))
     );
-    console.log(
-      chalk.gray('   Batch evaluations: ' + (config.slack.notifyOnBatch ? 'Enabled' : 'Disabled'))
-    );
 
-    // Optional: Test connection
-    const { testConnection } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'testConnection',
-        message: 'Test Slack connection now?',
-        default: false,
-      },
-    ]);
-
-    if (testConnection) {
-      try {
-        const { SlackService } = await import('../../src/services/slack.service.js');
-        const slackService = new SlackService(config.slack.botToken);
-        const testResult = await slackService.testConnection(config.slack.channelId);
-        if (testResult.success) {
-          console.log(chalk.green('✅ Slack connection test successful!'));
-        } else {
-          console.log(chalk.yellow('⚠️  Slack connection test failed:'));
-          // Format multi-line error messages properly
-          const errorLines = (testResult.error || 'Unknown error').split('\n');
-          errorLines.forEach((line) => {
-            console.log(chalk.red(`   ${line}`));
-          });
-          console.log(chalk.gray('\n   Common issues:'));
-          console.log(chalk.gray('   • Bot token is invalid or expired'));
-          console.log(
-            chalk.gray('   • Bot is not added to the channel (REQUIRED for public channels)')
-          );
-          console.log(chalk.gray('   • Bot lacks "chat:write" permission'));
-          console.log(chalk.gray('   • Channel ID is incorrect'));
-          console.log(chalk.gray('\n   How to add bot to channel:'));
-          console.log(chalk.gray('   1. Go to the Slack channel'));
-          console.log(chalk.gray('   2. Type: /invite @YourBotName'));
-          console.log(chalk.gray('   3. Or: Channel settings → Integrations → Add apps'));
-          console.log(
-            chalk.gray('\n   Check your Slack app permissions at: https://api.slack.com/apps')
-          );
-        }
-      } catch (error) {
+    // Automatically test connection
+    console.log(chalk.cyan('\n🔍 Testing Slack connection...'));
+    try {
+      const { SlackService } = await import('../../src/services/slack.service.js');
+      const slackService = new SlackService(config.slack.botToken);
+      const testResult = await slackService.testConnection(config.slack.channelId);
+      if (testResult.success) {
+        console.log(chalk.green('✅ Slack connection test successful!'));
+      } else {
+        console.log(chalk.yellow('⚠️  Slack connection test failed:'));
+        // Format multi-line error messages properly
+        const errorLines = (testResult.error || 'Unknown error').split('\n');
+        errorLines.forEach((line) => {
+          console.log(chalk.red(`   ${line}`));
+        });
+        console.log(chalk.gray('\n   Common issues:'));
+        console.log(chalk.gray('   • Bot token is invalid or expired'));
         console.log(
-          chalk.yellow(
-            `⚠️  Could not test connection: ${error instanceof Error ? error.message : String(error)}`
-          )
+          chalk.gray('   • Bot is not added to the channel (REQUIRED for public channels)')
+        );
+        console.log(chalk.gray('   • Bot lacks "chat:write" permission'));
+        console.log(chalk.gray('   • Channel ID is incorrect'));
+        console.log(chalk.gray('\n   How to add bot to channel:'));
+        console.log(chalk.gray('   1. Go to the Slack channel'));
+        console.log(chalk.gray('   2. Type: /invite @YourBotName'));
+        console.log(chalk.gray('   3. Or: Channel settings → Integrations → Add apps'));
+        console.log(
+          chalk.gray('\n   Check your Slack app permissions at: https://api.slack.com/apps')
         );
       }
+    } catch (error) {
+      console.log(
+        chalk.yellow(
+          `⚠️  Could not test connection: ${error instanceof Error ? error.message : String(error)}`
+        )
+      );
     }
   } else {
     config.slack = {
@@ -570,7 +524,6 @@ async function initializeConfig(): Promise<void> {
       botToken: '',
       channelId: '',
       notifyOnSingle: true,
-      notifyOnBatch: true,
     };
     console.log(
       chalk.gray(

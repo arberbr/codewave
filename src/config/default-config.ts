@@ -57,7 +57,6 @@ export const DEFAULT_CONFIG: AppConfig = {
     botToken: '',
     channelId: '',
     notifyOnSingle: true,
-    notifyOnBatch: true,
   },
   pdfReport: {
     enabled: true,
@@ -80,8 +79,6 @@ export const DEFAULT_CONFIG: AppConfig = {
       "commit.diff",
       "history.json"
     ],
-    notifyOnSingle: true,
-    notifyOnBatch: true,
   },
 };
 
